@@ -12,7 +12,7 @@ extern gdtPtr       ; GDT
 extern idtPtr       ; IDT
 extern tss			; TSS
 extern procReady	; 下一个进程
-extern testCode
+extern kreenter
 
 [section .bss]
 StackSpace resb 2*1024  ; 分配2K的栈空间
@@ -175,25 +175,39 @@ hwint00:                ; Interrupt routine for irq 0 (the clock).
 	mov ds, dx
 	mov es, dx
 
+	; 中断发生后，要向0x20或者0xA0端口发送EOI（中断控制器），然后才能继续产生中断
+	mov al, EOI
+	out INT_M_CTL, al
+
+	; 判断是否重入
+	inc dword [kreenter]
+	cmp dword [kreenter], 0
+	jne .reenter
+
 	; 使用内核栈
 	mov esp, StackTop
 
+	sti	; 开启中断
+
+	; ------------------------------
 	; 中断处理
 	inc byte [gs:0]
 	push clockMsg
 	call dispStr
 	add esp, 4
-	
-	; 中断发生后，要向0x20或者0xA0端口发送EOI，然后才能继续产生中断
-	mov al, EOI
-	out INT_M_CTL, al
+	; ------------------------------
+
+	cli	; 关闭中断，iretd会再次开启中断
 
 	; 加载新进程
 	mov esp, [procReady]
 	lea eax, [esp + P_STACKTOP]
 	mov dword [tss + TSS3_S_SP0], eax	; 将新进程进程表的栈顶保存到TSS中，供下次优先级转换使用
 
-	; 运行下一个进程
+.reenter:
+	dec dword [kreenter]
+
+	; 运行下一个进程或者恢复进程
 	pop gs
 	pop fs
 	pop es

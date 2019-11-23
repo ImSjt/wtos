@@ -1,9 +1,0 @@
-{
-    "files.associations": {
-        "irq.h": "c",
-        "type.h": "c",
-        "global.h": "c",
-        "string.h": "c",
-        "protect.h": "c"
-    }
-}

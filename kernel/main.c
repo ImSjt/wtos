@@ -24,6 +24,9 @@ char taskStack[STACK_SIZE_TOTAL];
 /* TSS */
 struct TSS tss;
 
+/* 控制中断可重入 */
+int kreenter;
+
 extern void restart();
 
 static void testA();
@@ -31,6 +34,8 @@ static void testA();
 void kinit()
 {
     dispPos = 0;
+    kreenter = -1;
+    
     dispStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n"
         "-----\"kinit\"begins-----\n");
 
