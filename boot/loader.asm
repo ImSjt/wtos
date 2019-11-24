@@ -1,29 +1,35 @@
-org 0100h
+org 0100h	; 段内预留0100h大小作为临时栈使用
 
     jmp LABEL_START
 
 %include "load.inc"
 %include "fat12hdr.inc"
 %include "pm.inc"
-
+ 
 ; GDT
 ; 段基址，段界限，段属性
+; 段的起始地址都是从0开始，即逻辑地址等于线性地址
 LABEL_GDT: Descriptor 0, 0, 0
-LABEL_DESC_FLAT_C: Descriptor 0, 0FFFFFh, DA_CR|DA_32|DA_LIMIT_4K       ; 0-4G
-LABEL_DESC_FLAT_RW: Descriptor 0, 0FFFFFh,  DA_DRW|DA_32|DA_LIMIT_4K    ; 0-4G
-LABEL_DESC_VIDEO: Descriptor 0B8000h, 0FFFFFh,  DA_DRW|DA_DPL3         ; 显存首地址
+LABEL_DESC_KERNEL_CS: Descriptor 0, 0FFFFFh, DA_CR|DA_32|DA_LIMIT_4K       	 ; 0-4G，内核代码段
+LABEL_DESC_KERNEL_DS: Descriptor 0, 0FFFFFh,  DA_DRW|DA_32|DA_LIMIT_4K    	 ; 0-4G，内核数据段
+LABEL_DESC_USER_CS: Descriptor 0, 0FFFFFh, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3   ; 0-4G，用户代码段
+LABEL_DESC_USER_DS: Descriptor 0, 0FFFFFh,  DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3 ; 0-4G，用户数据段
+LABEL_DESC_VIDEO: Descriptor 0B8000h, 0FFFFFh,  DA_DRW|DA_DPL3         		 ; 显存首地址，显存段
 
 GdtLen equ $-LABEL_GDT
 
+; GDTPTR寄存器加载值
 GdtPtr dw GdtLen - 1    ; 段界限
 dd BaseOfLoaderPhyAddr + LABEL_GDT  ; 段物理地址
 
 ; GDT选择子
-SelectorFlatC equ LABEL_DESC_FLAT_C - LABEL_GDT
-SelectorFlatRW equ LABEL_DESC_FLAT_RW - LABEL_GDT
-SelectorVideo equ LABEL_DESC_VIDEO - LABEL_GDT + SA_RPL3
+SelectorKernelCS equ LABEL_DESC_KERNEL_CS - LABEL_GDT				; 内核代码段选择子
+SelectorKernelDS equ LABEL_DESC_KERNEL_DS - LABEL_GDT				; 内核数据段选择子
+SelectorUserCS equ LABEL_DESC_USER_CS - LABEL_GDT + SA_RPL3			; 用户代码段选择子
+SelectorUserDS equ LABEL_DESC_USER_DS - LABEL_GDT + SA_RPL3			; 用户数据段选择子
+SelectorVideo equ LABEL_DESC_VIDEO - LABEL_GDT + SA_RPL3			; 显存段选择子
 
-BaseOfStack equ 0100h
+BaseOfStack equ 0100h		; 栈基址
 PageDirBase	equ	100000h	; 页目录开始地址: 1M
 PageTblBase	equ	101000h	; 页表开始地址:   1M + 4K
 
@@ -35,7 +41,7 @@ LABEL_START:
     mov sp, BaseOfStack
 
     mov dh, 0
-    call DispStrRealMode
+    call DispStrRealMode	; 显示 "Loading."
 
     ; 获取物理内存空间范围
     mov ebx, 0
@@ -120,80 +126,80 @@ LABEL_NO_KERNEL:
     jmp $
 
 LABEL_FILE_FOUND:
-    mov ax, RootDirSectors
-    and di, 0FFF0h          ; 单前目录项条目
+	mov ax, RootDirSectors
+	and di, 0FFF0h          ; 单前目录项条目
 
-    push eax
-    mov eax, [es:di + 01Ch] ; 得到文件的大小
-    mov dword [dwKernelSize], eax
-    pop eax
+	push eax
+	mov eax, [es:di + 01Ch] ; 得到文件的大小
+	mov dword [dwKernelSize], eax
+	pop eax
 
-    add di, 01Ah            ; 文件的首簇号
-    mov cx, word [es:di]
-    push cx
+	add di, 01Ah            ; 文件的首簇号
+	mov cx, word [es:di]
+	push cx
 
-    ; 计算对应的扇区号
-    add cx, ax
-    add cx, DeltaSectorNo
+	; 计算对应的扇区号
+	add cx, ax
+	add cx, DeltaSectorNo
 
-    ; 为读取软盘做准备
-    mov ax, BaseOfKernelFile
-    mov es, ax
-    mov bx, OffsetOfKernelFile
-    mov ax, cx
+	; 为读取软盘做准备
+	mov ax, BaseOfKernelFile
+	mov es, ax
+	mov bx, OffsetOfKernelFile
+	mov ax, cx
 
 LABEL_GOON_LOADING_FILE:
-    ; 每加载一个扇区就打印一个点
-    push ax
-    push bx
-    mov ah, 0Fh
-    mov al, '.'
-    mov bl, 0Fh
-    int 10h
-    pop bx
-    pop ax
+	; 每加载一个扇区就打印一个点
+	push ax
+	push bx
+	mov ah, 0Fh
+	mov al, '.'
+	mov bl, 0Fh
+	int 10h
+	pop bx
+	pop ax
 
-    ; 读取一个扇区
-    mov cl, 1
-    call ReadSector
+	; 读取一个扇区
+	mov cl, 1
+	call ReadSector
 
-    ; 读取该扇区在FAT区中对应的内容
-    pop ax
-    call GetFATEntry
-    cmp ax, 0FFFh
-    jz LABEL_FILE_LOADER    ; 如果文件读取完了，就加载文件
+	; 读取该扇区在FAT区中对应的内容
+	pop ax
+	call GetFATEntry
+	cmp ax, 0FFFh
+	jz LABEL_FILE_LOADER    ; 如果文件读取完了，就加载文件
 
-    ; 将簇号转换为扇区号
-    push ax
-    mov dx, RootDirSectors
-    add ax, dx
-    add ax, DeltaSectorNo
-    add bx, [BPB_BytsPerSec]
-    jmp LABEL_GOON_LOADING_FILE
+	; 将簇号转换为扇区号
+	push ax
+	mov dx, RootDirSectors
+	add ax, dx
+	add ax, DeltaSectorNo
+	add bx, [BPB_BytsPerSec]
+	jmp LABEL_GOON_LOADING_FILE
 
 LABEL_FILE_LOADER:
 
-    call KillMotor ; 关闭软驱马达
+	call KillMotor ; 关闭软驱马达
 
-    mov dh, 1
-    call DispStrRealMode
+	mov dh, 1
+	call DispStrRealMode
 
-    lgdt [GdtPtr]   ; 加载GDTR
+	lgdt [GdtPtr]   ; 加载GDTR
 
-    cli             ; 关中断
+	cli             ; 关中断
 
-    ; 打开地址线A20
-    in al, 92h
-    or al, 00000010b
-    out 92h, al
+	; 打开地址线A20
+	in al, 92h
+	or al, 00000010b
+	out 92h, al
 
-    ; 打开保护模式
-    mov eax, cr0
-    or eax, 1
-    mov cr0, eax
+	; 打开保护模式
+	mov eax, cr0
+	or eax, 1
+	mov cr0, eax
 
-    ; 真正进入保护模式
-    jmp dword SelectorFlatC:(BaseOfLoaderPhyAddr+LABEL_PM_START)
+	; 真正进入保护模式
+	jmp dword SelectorKernelCS:(BaseOfLoaderPhyAddr+LABEL_PM_START)
 
 wRootDirSizeForLoop	dw	RootDirSectors	; Root Directory 占用的扇区数
 wSectorNo		dw	0		; 要读取的扇区号
@@ -317,30 +323,33 @@ KillMotor:
 ALIGN 32
 [BITS 32]
 LABEL_PM_START:
-    mov ax, SelectorVideo
-    mov gs, ax
-    ;mov ah, 0Fh
-    ;mov al, 'p'
-    ;mov [gs:((80*0 + 39)*2)], ax
+	mov ax, SelectorVideo
+	mov gs, ax
+	;mov ah, 0Fh
+	;mov al, 'p'
+	;mov [gs:((80*0 + 39)*2)], ax
 
-    ; 初始化段寄存器
-    mov ax, SelectorFlatRW
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov ss, ax
-    mov esp, TopOfStack
+	; 初始化段寄存器
+	mov ax, SelectorKernelDS
+	mov ds, ax
+	mov es, ax
+	mov fs, ax
+	mov ss, ax
 
-    push szMemChkTitle
-    call DispStr
-    add esp, 4
+	; 设置栈顶
+	mov esp, TopOfStack
 
-    call DispMemInfo
-    call SetupPaging
+	push szMemChkTitle
+	call DispStr
+	add esp, 4
 
-    call InitKernel
+	call DispMemInfo
+	call SetupPaging
 
-    jmp SelectorFlatC:KernelEntryPointPhyAddr   ; 跳转执行内核
+	; 将内核elf文件加载到内核，并移动到链接地址
+	call InitKernel
+
+	jmp SelectorKernelCS:KernelEntryPointPhyAddr ; 跳转执行内核
 
 %include "lib.inc"  ; 包含打印的函数
 
@@ -406,7 +415,7 @@ SetupPaging:
 .no_remainder:
     push ecx        ; 暂存需要的页表个数
 
-    mov ax, SelectorFlatRW
+    mov ax, SelectorKernelDS
     mov es, ax
     mov edi, PageDirBase    ; 页目录项首地址
     xor eax, eax
@@ -505,11 +514,11 @@ dwDispPos		equ	BaseOfLoaderPhyAddr + _dwDispPos
 dwMemSize		equ	BaseOfLoaderPhyAddr + _dwMemSize
 dwMCRNumber		equ	BaseOfLoaderPhyAddr + _dwMCRNumber
 ARDStruct		equ	BaseOfLoaderPhyAddr + _ARDStruct
-	dwBaseAddrLow	equ	BaseOfLoaderPhyAddr + _dwBaseAddrLow
-	dwBaseAddrHigh	equ	BaseOfLoaderPhyAddr + _dwBaseAddrHigh
-	dwLengthLow	equ	BaseOfLoaderPhyAddr + _dwLengthLow
-	dwLengthHigh	equ	BaseOfLoaderPhyAddr + _dwLengthHigh
-	dwType		equ	BaseOfLoaderPhyAddr + _dwType
+dwBaseAddrLow	equ	BaseOfLoaderPhyAddr + _dwBaseAddrLow
+dwBaseAddrHigh	equ	BaseOfLoaderPhyAddr + _dwBaseAddrHigh
+dwLengthLow	equ	BaseOfLoaderPhyAddr + _dwLengthLow
+dwLengthHigh	equ	BaseOfLoaderPhyAddr + _dwLengthHigh
+dwType		equ	BaseOfLoaderPhyAddr + _dwType
 MemChkBuf		equ	BaseOfLoaderPhyAddr + _MemChkBuf
 
 ; 分配一段栈空间

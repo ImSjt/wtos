@@ -64,13 +64,14 @@ global  hwint14
 global  hwint15
 
 _start:
-    	mov esp, StackTop   ; 重新设置栈
+	mov esp, StackTop   ; 重新设置栈
 
-   	sgdt [gdtPtr]       ; 将GdtPtr加载到内存中
-    	call kinit          ; 调用C函数重新设置GDT
-    	lgdt [gdtPtr]       ; 加载新的GDT
+	; 移动GDT
+	sgdt [gdtPtr]       ; 将GdtPtr加载到内存中
+	call kinit          ; 调用C函数重新设置GDT
+	lgdt [gdtPtr]       ; 加载新的GDT
 
-    	lidt [idtPtr]       ; 加载IDT，中断向量表
+	lidt [idtPtr]       ; 加载IDT，中断向量表
 
 	jmp	SELECTOR_KERNEL_CS:csinit
 
@@ -152,10 +153,10 @@ exception:								; 异常处理函数
 
 ; 中断处理
 %macro  hwint_master    1
-        push %1
-        call doIrq
-        add esp, 4
-        hlt
+    push %1
+    call doIrq
+    add esp, 4
+    hlt
 %endmacro
 
 ALIGN   16
@@ -286,7 +287,7 @@ hwint15:                ; Interrupt routine for irq 15
 
 restart:
 	mov esp, [procReady]				; 指向进程表项
-	lldt [esp + P_LDT_SEL]				; 加载LDT
+	;lldt [esp + P_LDT_SEL]				; 加载LDT
 	lea eax, [esp + P_STACKTOP]			; 移动到栈帧顶部
 	mov dword [tss + TSS3_S_SP0], eax		; 将当前进程表项栈顶保存到tss中
 

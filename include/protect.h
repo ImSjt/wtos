@@ -63,7 +63,7 @@ struct TSS
 #define	PRIVILEGE_USER	3
 
 /* GDT 和 IDT 中描述符的个数 */
-#define	GDT_SIZE	128
+#define	GDT_SIZE	INDEX_MAX
 #define IDT_SIZE	256 /* 中断向量 */
 
 /* 每个进程的LDT的个数 */
@@ -72,23 +72,23 @@ struct TSS
 /* GDT */
 /* 描述符索引 */
 #define	INDEX_DUMMY			0
-#define	INDEX_FLAT_C		1
-#define	INDEX_FLAT_RW		2
-#define	INDEX_VIDEO			3
-#define INDEX_TSS			4
-#define INDEX_LDT_FIRST		5
+#define INDEX_KERNEL_CS     1
+#define INDEX_KERNEL_DS     2
+#define INDEX_USER_CS       3
+#define INDEX_USER_DS       4
+#define INDEX_VIDEO         5
+#define INDEX_TSS           6
+#define INDEX_MAX           (INDEX_TSS+1)
 
 /* 选择子 */
-#define	SELECTOR_DUMMY		   0
-#define	SELECTOR_FLAT_C		0x08
-#define	SELECTOR_FLAT_RW	0x10
-#define	SELECTOR_VIDEO		(0x18+3)
-#define SELECTOR_TSS		0x20
-#define SELECTOR_LDT_FIRST  0x28
-
-#define	SELECTOR_KERNEL_CS	SELECTOR_FLAT_C		/* 内核代码段 */
-#define	SELECTOR_KERNEL_DS	SELECTOR_FLAT_RW	/* 内核数据段 */
-#define	SELECTOR_KERNEL_GS	SELECTOR_VIDEO
+#define OFFSET_INDEX        3
+#define	SELECTOR_DUMMY		    (INDEX_DUMMY << OFFSET_INDEX)
+#define	SELECTOR_KERNEL_CS		(INDEX_KERNEL_CS << OFFSET_INDEX)
+#define SELECTOR_KERNEL_DS      (INDEX_KERNEL_DS << OFFSET_INDEX)
+#define SELECTOR_USER_CS        ((INDEX_USER_CS << OFFSET_INDEX) | RPL_USER)
+#define SELECTOR_USER_DS        ((INDEX_USER_DS << OFFSET_INDEX) | RPL_USER)
+#define SELECTOR_GS             ((INDEX_VIDEO << OFFSET_INDEX) | RPL_USER)
+#define SELECTOR_TSS            (INDEX_TSS << 3)
 
 /* 权限 */
 #define	PRIVILEGE_KRNL	0
@@ -166,7 +166,9 @@ struct TSS
 #define	INT_VECTOR_IRQ8			0x28
 
 /* 虚拟地址转换为物理地址 */
-#define vir2phys(segBase, vir)	(u32)(((u32)segBase) + (u32)(vir))
+//#define vir2phys(segBase, vir)	(u32)(((u32)segBase) + (u32)(vir))
+#define OFFSET_ADDR             0x00000000      // 物理地址到线性地址的偏移值，取决于分页机制决定
+#define vir2phys(vir)           (u32)(vir-OFFSET_ADDR)
 
 void initProt();
 

@@ -24,9 +24,16 @@ P_LDT		equ	P_LDT_SEL	+ 4
 TSS3_S_SP0	equ	4
 
 ; 以下选择子值必须与 protect.h 中保持一致!!!
-SELECTOR_FLAT_C		equ		0x08	; LOADER 里面已经确定了的.
-SELECTOR_TSS		equ		0x20	; TSS
-SELECTOR_KERNEL_CS	equ		SELECTOR_FLAT_C
+; 描述符索引
+INDEX_KERNEL_CS     equ		1
+INDEX_KERNEL_DS     equ		2
+INDEX_TSS           equ		6
+
+; 选择子
+OFFSET_INDEX        equ		3
+SELECTOR_KERNEL_CS	equ		(INDEX_KERNEL_CS << OFFSET_INDEX)
+SELECTOR_KERNEL_DS  equ 	(INDEX_KERNEL_DS << OFFSET_INDEX)
+SELECTOR_TSS        equ 	(INDEX_TSS << OFFSET_INDEX)
 
 INT_M_CTL equ 0x20 ; I/O port for interrupt controller <Master>
 INT_M_CTLMASK equ 0x21 ; setting bits in this port disables ints <Master> 

@@ -95,6 +95,8 @@ void initProt()
 	initIdtDesc(INT_VECTOR_IRQ8+6, DA_386IGate, hwint14, PRIVILEGE_KRNL);
 	initIdtDesc(INT_VECTOR_IRQ8+7, DA_386IGate, hwint15, PRIVILEGE_KRNL);
 
+
+#if 0
 	/* 初始化tss的段描述符 */
 	memset(&tss, 0, sizeof(tss));
 	tss.ss0 = SELECTOR_KERNEL_DS;	/* 暂时只需要使用这一个变量 */
@@ -109,6 +111,13 @@ void initProt()
 					vir2phys(seg2phys(SELECTOR_KERNEL_DS), procTable[0].ldts),
 					LDT_SIZE * sizeof(struct SegmentDescriptor)-1,
 					DA_LDT);
+#endif
+
+    /* 初始化tss，并设置GDT */
+    memset(&tss, 0, sizeof(tss));
+    tss.ss0 = SELECTOR_KERNEL_DS;
+    initDescriptor(&gdt[INDEX_TSS], vir2phys(&tss), sizeof(tss)-1, DA_386TSS);
+    tss.iobase = sizeof(tss);
 }
 
 /* 初始化中断门 */

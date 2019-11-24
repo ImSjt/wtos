@@ -37,8 +37,6 @@ struct Process
 {
 	struct StackFrame regs;          /* process registers saved in stack frame */
 
-	u16 ldtSelector;               /* gdt selector giving ldt base and limit */
-	struct SegmentDescriptor ldts[LDT_SIZE]; /* local descriptors for code and data */
 	u32 pid;                   /* process id passed in from MM */
 	char name[16];           /* name of the process */
 };
