@@ -14,6 +14,7 @@ extern idtPtr       ; IDT
 extern tss			; TSS
 extern procReady	; 下一个进程
 extern kreenter
+extern irqTable
 
 [section .bss]
 StackSpace resb 2*1024  ; 分配2K的栈空间
@@ -153,17 +154,108 @@ exception:								; 异常处理函数
 	hlt
 
 ; 中断处理
-%macro  hwint_master    1
-    push %1
-    call doIrq
-    add esp, 4
-    hlt
+%macro	hwint_master	1
+	; 保存线程
+	call	save
+
+	; 关指定中断
+	in	al, INT_M_CTLMASK
+	or	al, (1 << %1)
+	out	INT_M_CTLMASK, al
+	mov	al, EOI
+	out	INT_M_CTL, al
+
+	; 打开CPU的中断响应
+	sti
+
+	; 调用中断处理函数
+	push	%1
+	call	[irqTable + 4 * %1]
+	pop	ecx
+
+	; 关闭CPU的中断响应
+	cli
+
+	; 开启指定的中断
+	in	al, INT_M_CTLMASK
+	and	al, ~(1 << %1)
+	out	INT_M_CTLMASK, al
+	ret
 %endmacro
 
 ALIGN   16
 hwint00:                ; Interrupt routine for irq 0 (the clock).
-	; 保存现场，这些信息保存在当前进程的进程表中
-	sub esp, 4
+	hwint_master	0
+
+ALIGN   16
+hwint01:                ; Interrupt routine for irq 1 (keyboard)
+	hwint_master	1
+
+ALIGN   16
+hwint02:                ; Interrupt routine for irq 2 (cascade!)
+	hwint_master	2
+
+ALIGN   16
+hwint03:                ; Interrupt routine for irq 3 (second serial)
+	hwint_master	3
+
+ALIGN   16
+hwint04:                ; Interrupt routine for irq 4 (first serial)
+	hwint_master	4
+
+ALIGN   16
+hwint05:                ; Interrupt routine for irq 5 (XT winchester)
+	hwint_master	5
+
+ALIGN   16
+hwint06:                ; Interrupt routine for irq 6 (floppy)
+	hwint_master	6
+
+ALIGN   16
+hwint07:                ; Interrupt routine for irq 7 (printer)
+	hwint_master	7
+
+%macro  hwint_slave     1
+    push    %1
+    call    doIrq
+    add     esp, 4
+    hlt
+%endmacro
+
+ALIGN   16
+hwint08:                ; Interrupt routine for irq 8 (realtime clock).
+    hwint_slave     8
+
+ALIGN   16
+hwint09:                ; Interrupt routine for irq 9 (irq 2 redirected)
+    hwint_slave     9
+
+ALIGN   16
+hwint10:                ; Interrupt routine for irq 10
+    hwint_slave     10
+
+ALIGN   16
+hwint11:                ; Interrupt routine for irq 11
+    hwint_slave     11
+
+ALIGN   16
+hwint12:                ; Interrupt routine for irq 12
+    hwint_slave     12
+
+ALIGN   16
+hwint13:                ; Interrupt routine for irq 13 (FPU exception)
+    hwint_slave     13
+
+ALIGN   16
+hwint14:                ; Interrupt routine for irq 14 (AT winchester)
+    hwint_slave     14
+
+ALIGN   16
+hwint15:                ; Interrupt routine for irq 15
+    hwint_slave     15
+
+save:
+	; 保存寄存器
 	pushad
 	push ds
 	push es
@@ -177,121 +269,34 @@ hwint00:                ; Interrupt routine for irq 0 (the clock).
 	mov ds, dx
 	mov es, dx
 
-	; 中断发生后，要向0x20或者0xA0端口发送EOI（中断控制器），然后才能继续产生中断
-	mov al, EOI
-	out INT_M_CTL, al
+	; 将当前栈顶保存下来
+	mov eax, esp
 
 	; 判断是否重入
 	inc dword [kreenter]
 	cmp dword [kreenter], 0
-	jne .reenter
+	jne .1
 
 	; 使用内核栈
 	mov esp, StackTop
 
-	sti	; 开启中断
+	push restart
+	jmp .2
 
-	; ------------------------------
-	; 中断处理
-	;inc byte [gs:0]
-	;push clockMsg
-	;call dispStr
-	;add esp, 4
-	call scheduleTick
-	; ------------------------------
+.1:
+	push reenter	; 中断重入
 
-	cli	; 关闭中断，iretd会再次开启中断
-
-	; 加载新进程
-	mov esp, [procReady]
-	lea eax, [esp + P_STACKTOP]
-	mov dword [tss + TSS3_S_SP0], eax	; 将新进程进程表的栈顶保存到TSS中，供下次优先级转换使用
-
-.reenter:
-	dec dword [kreenter]
-
-	; 运行下一个进程或者恢复进程
-	pop gs
-	pop fs
-	pop es
-	pop ds
-	popad
-	add esp, 4
-	
-	iretd	; iretd会将栈中eflag设置到eflag寄存器（如果栈中的eflag设置了重新打开中断，那么就会重新打开中断）
-
-ALIGN   16
-hwint01:                ; Interrupt routine for irq 1 (keyboard)
-        hwint_master    1
-
-ALIGN   16
-hwint02:                ; Interrupt routine for irq 2 (cascade!)
-        hwint_master    2
-
-ALIGN   16
-hwint03:                ; Interrupt routine for irq 3 (second serial)
-        hwint_master    3
-
-ALIGN   16
-hwint04:                ; Interrupt routine for irq 4 (first serial)
-        hwint_master    4
-
-ALIGN   16
-hwint05:                ; Interrupt routine for irq 5 (XT winchester)
-        hwint_master    5
-
-ALIGN   16
-hwint06:                ; Interrupt routine for irq 6 (floppy)
-        hwint_master    6
-
-ALIGN   16
-hwint07:                ; Interrupt routine for irq 7 (printer)
-        hwint_master    7
-
-%macro  hwint_slave     1
-        push    %1
-        call    doIrq
-        add     esp, 4
-        hlt
-%endmacro
-
-ALIGN   16
-hwint08:                ; Interrupt routine for irq 8 (realtime clock).
-        hwint_slave     8
-
-ALIGN   16
-hwint09:                ; Interrupt routine for irq 9 (irq 2 redirected)
-        hwint_slave     9
-
-ALIGN   16
-hwint10:                ; Interrupt routine for irq 10
-        hwint_slave     10
-
-ALIGN   16
-hwint11:                ; Interrupt routine for irq 11
-        hwint_slave     11
-
-ALIGN   16
-hwint12:                ; Interrupt routine for irq 12
-        hwint_slave     12
-
-ALIGN   16
-hwint13:                ; Interrupt routine for irq 13 (FPU exception)
-        hwint_slave     13
-
-ALIGN   16
-hwint14:                ; Interrupt routine for irq 14 (AT winchester)
-        hwint_slave     14
-
-ALIGN   16
-hwint15:                ; Interrupt routine for irq 15
-        hwint_slave     15
+.2:
+	jmp [eax + RETADR - P_STACKBASE] ; 函数调用返回
 
 restart:
 	mov esp, [procReady]				; 指向进程表项
 	;lldt [esp + P_LDT_SEL]				; 加载LDT
 	lea eax, [esp + P_STACKTOP]			; 移动到栈帧顶部
 	mov dword [tss + TSS3_S_SP0], eax		; 将当前进程表项栈顶保存到tss中
+
+reenter:
+	dec dword [kreenter]
 
 	; 从栈中弹出各个寄存器的值
 	pop gs

@@ -2,6 +2,9 @@
 #include "irq.h"
 #include "protect.h"
 #include "string.h"
+#include "global.h"
+
+void doIrq(int irq);
 
 /* 初始化中断控制器 */
 void init8259A()
@@ -35,6 +38,10 @@ void init8259A()
 
 	/* Slave  8259, OCW1.  */
 	outByte(INT_S_CTLMASK,	0xFF);
+
+    int i;
+    for(i = 0; i < NR_IRQ; ++i)
+        irqTable[i] = doIrq;
 }
 
 /* 外部中断处理函数 */
@@ -44,3 +51,10 @@ void doIrq(int irq)
     dispInt(irq);
     dispStr("\n");
 }
+
+void putIrqHandler(int irq, irqHandler handler)
+{
+	disableIrq(irq);
+	irqTable[irq] = handler;
+}
+

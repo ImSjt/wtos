@@ -165,6 +165,19 @@ struct TSS
 #define	INT_VECTOR_IRQ0			0x20
 #define	INT_VECTOR_IRQ8			0x28
 
+/* Hardware interrupts */
+#define	NR_IRQ		16	/* Number of IRQs */
+#define	CLOCK_IRQ	0
+#define	KEYBOARD_IRQ	1
+#define	CASCADE_IRQ	2	/* cascade enable for 2nd AT controller */
+#define	ETHER_IRQ	3	/* default ethernet interrupt vector */
+#define	SECONDARY_IRQ	3	/* RS232 interrupt vector for port 2 */
+#define	RS232_IRQ	4	/* RS232 interrupt vector for port 1 */
+#define	XT_WINI_IRQ	5	/* xt winchester */
+#define	FLOPPY_IRQ	6	/* floppy disk */
+#define	PRINTER_IRQ	7
+#define	AT_WINI_IRQ	14	/* at winchester */
+
 /* 虚拟地址转换为物理地址 */
 //#define vir2phys(segBase, vir)	(u32)(((u32)segBase) + (u32)(vir))
 #define OFFSET_ADDR             0x00000000      // 物理地址到线性地址的偏移值，取决于分页机制决定

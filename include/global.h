@@ -17,4 +17,8 @@ extern struct Process* procReady;
 
 extern struct TSS tss;
 
+extern int kreenter;
+
+extern irqHandler irqTable[];
+
 #endif /* _GLOBAL_H_ */

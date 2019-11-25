@@ -26,17 +26,19 @@ struct TSS tss;
 /* 控制中断可重入 */
 int kreenter;
 
+irqHandler irqTable[NR_IRQ];
 /* ------------------------------------------------------------------*/
 
 extern void restart();
 
 static void testA();
 static void testB();
+static void testC();
 
 void kinit()
 {
     dispPos = 0;
-    kreenter = -1;
+    kreenter = 0;
     
     /* 将GDT拷贝到新地址处 */
     memcpy(&gdt, (void*)(*(u32*)(&gdtPtr[2])),  *((u16*)(&gdtPtr[0]))+1);
@@ -79,8 +81,12 @@ int kmain()
 
     proc[0].regs.eip = (u32)testA;
     proc[1].regs.eip = (u32)testB;
+    proc[2].regs.eip = (u32)testC;
 
     procReady = proc; /* 设置下一个调度的进程 */
+
+    putIrqHandler(CLOCK_IRQ, scheduleTick);
+    enableIrq(CLOCK_IRQ);
 
     restart(); /* 启动第一个进程 */
 
@@ -93,11 +99,9 @@ int kmain()
 /* 进程A */
 static void testA()
 {
-    int i = 0;
-
     while(1)
     {
-        dispStr("A");
+        dispStr("A ");
         delay(5);
     }
 }
@@ -105,11 +109,18 @@ static void testA()
 /* 进程B */
 static void testB()
 {
-    int i = 0;
-
     while(1)
     {
-        dispStr("B");
+        dispStr("B ");
+        delay(5);
+    }
+}
+
+static void testC()
+{
+    while(1)
+    {
+        dispStr("C ");
         delay(5);
     }
 }

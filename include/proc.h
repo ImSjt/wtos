@@ -4,12 +4,9 @@
 #include "protect.h"
 
 /* 最大进程个数 */
-#define NR_TASKS 2
+#define NR_TASKS 3
 
 /* 进程栈大小 */
-#define STACK_SIZE_TESTA	0x8000
-#define STACK_SIZE_TOTAL	STACK_SIZE_TESTA
-
 #define STACK_SIZE 4096
 
 struct StackFrame

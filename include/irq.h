@@ -10,4 +10,12 @@ u8 inByte(u16 port);
 
 void init8259A();
 
+void disableIrq(int irq);
+void enableIrq(int irq);
+
+void putIrqHandler(int irq, irqHandler handler);
+
+void scheduleTick(int n);
+
+
 #endif /* _IRQ_H_ */
