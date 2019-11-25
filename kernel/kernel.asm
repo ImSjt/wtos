@@ -6,6 +6,7 @@ extern exceptionHandler
 extern doIrq
 extern kmain
 extern dispStr
+extern scheduleTick
 
 ; 导入全局变量
 extern gdtPtr       ; GDT
@@ -192,10 +193,11 @@ hwint00:                ; Interrupt routine for irq 0 (the clock).
 
 	; ------------------------------
 	; 中断处理
-	inc byte [gs:0]
-	push clockMsg
-	call dispStr
-	add esp, 4
+	;inc byte [gs:0]
+	;push clockMsg
+	;call dispStr
+	;add esp, 4
+	call scheduleTick
 	; ------------------------------
 
 	cli	; 关闭中断，iretd会再次开启中断

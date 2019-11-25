@@ -13,8 +13,7 @@ extern struct Gate idt[IDT_SIZE];
 extern int dispPos;
 
 extern struct Process procTable[];
-
-//extern	char taskStack[];
+extern struct Process* procReady;
 
 extern struct TSS tss;
 

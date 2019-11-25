@@ -1,4 +1,4 @@
-OBJ = kernel.o main.o protect.o i8259.o
+OBJ = kernel.o main.o protect.o i8259.o schedule.o
 
 all : build-in.o
 

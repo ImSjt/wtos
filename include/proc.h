@@ -4,11 +4,13 @@
 #include "protect.h"
 
 /* 最大进程个数 */
-#define NR_TASKS 1
+#define NR_TASKS 2
 
 /* 进程栈大小 */
 #define STACK_SIZE_TESTA	0x8000
 #define STACK_SIZE_TOTAL	STACK_SIZE_TESTA
+
+#define STACK_SIZE 4096
 
 struct StackFrame
 {
@@ -36,7 +38,7 @@ struct StackFrame
 struct Process
 {
 	struct StackFrame regs;          /* process registers saved in stack frame */
-
+    char stack[STACK_SIZE];
 	u32 pid;                   /* process id passed in from MM */
 	char name[16];           /* name of the process */
 };

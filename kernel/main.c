@@ -5,11 +5,11 @@
 #include "proc.h"
 
 /* -----------------------------全局变量-----------------------------*/
-/* GDT */
+/* GDT，全局段描述符表 */
 u8 gdtPtr[6];                       /* 0~15:Limit  16~47:Base */
 struct SegmentDescriptor gdt[GDT_SIZE];    /* GDT */
 
-/* LDT */
+/* LDT，中断向量表 */
 u8 idtPtr[6];
 struct Gate idt[IDT_SIZE];
 
@@ -17,11 +17,8 @@ struct Gate idt[IDT_SIZE];
 int dispPos;
 
 /* 进程描述表 */
-struct Process procTable[NR_TASKS];
-struct Process* procReady;
-
-/* 任务栈 */
-char taskStack[STACK_SIZE_TOTAL];
+struct Process procTable[NR_TASKS]; /* 进程描述表 */
+struct Process* procReady;  /* 准备就绪的进程s */
 
 /* TSS */
 struct TSS tss;
@@ -34,6 +31,7 @@ int kreenter;
 extern void restart();
 
 static void testA();
+static void testB();
 
 void kinit()
 {
@@ -64,26 +62,30 @@ int kmain()
     dispStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n----start kernel----\n");
 
     struct Process* proc = procTable;
+    int i;
 
-    /* 初始化寄存器的值，cs指向LDT中第一个段描述符，其它指向第二个 */
-	proc->regs.cs = SELECTOR_USER_CS;
-	proc->regs.ds = SELECTOR_USER_DS;
-	proc->regs.es = SELECTOR_USER_DS;
-	proc->regs.fs = SELECTOR_USER_DS;
-	proc->regs.ss = SELECTOR_USER_DS;
-	proc->regs.gs = SELECTOR_GS;
-	proc->regs.eip = (u32)testA; /* 进程入口地址 */
-	proc->regs.esp = (u32)taskStack + STACK_SIZE_TOTAL;
-	proc->regs.eflags = 0x1202;	/* IF=1, IOPL=1, bit 2 is always 1.iret后，会打开中断和设置IO允许位 */
+    for(i = 0; i < NR_TASKS; ++i)
+    {
+        /* 初始化寄存器的值，cs指向LDT中第一个段描述符，其它指向第二个 */
+        proc[i].regs.cs = SELECTOR_USER_CS;
+        proc[i].regs.ds = SELECTOR_USER_DS;
+        proc[i].regs.es = SELECTOR_USER_DS;
+        proc[i].regs.fs = SELECTOR_USER_DS;
+        proc[i].regs.ss = SELECTOR_USER_DS;
+        proc[i].regs.gs = SELECTOR_GS;
+        proc[i].regs.esp = (u32)proc[i].stack + STACK_SIZE;
+        proc[i].regs.eflags = 0x1202;	/* IF=1, IOPL=1, bit 2 is always 1.iret后，会打开中断和设置IO允许位 */
+    }
+
+    proc[0].regs.eip = (u32)testA;
+    proc[1].regs.eip = (u32)testB;
 
     procReady = proc; /* 设置下一个调度的进程 */
 
     restart(); /* 启动第一个进程 */
 
     while(1)
-    {
-
-    }
+    {}
 
     return 0;
 }
@@ -96,8 +98,18 @@ static void testA()
     while(1)
     {
         dispStr("A");
-        dispInt(i++);
-        dispStr(".");
-        delay(10);
+        delay(5);
+    }
+}
+
+/* 进程B */
+static void testB()
+{
+    int i = 0;
+
+    while(1)
+    {
+        dispStr("B");
+        delay(5);
     }
 }

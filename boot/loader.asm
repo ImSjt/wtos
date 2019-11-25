@@ -398,7 +398,7 @@ DispMemInfo:
 	pop	esi
 	ret
 
-; 启动分页
+; 启动分页，这一块重新设置
 SetupPaging:
     
     xor edx, edx
@@ -444,7 +444,6 @@ SetupPaging:
     ; 开启分页
     mov eax, PageDirBase
     mov cr3, eax
-    mov eax, cr0
     mov	eax, cr0
     or	eax, 80000000h
     mov	cr0, eax
