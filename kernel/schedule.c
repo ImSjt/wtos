@@ -16,6 +16,7 @@ void scheduleTick(int n)
         return;
     }
 
+    ++ticks;
     ++procReady;
     if(procReady >= procTable+NR_TASKS)
         procReady = procTable;

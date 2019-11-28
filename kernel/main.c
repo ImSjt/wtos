@@ -3,6 +3,7 @@
 #include "string.h"
 #include "irq.h"
 #include "proc.h"
+#include "syscall.h"
 
 /* -----------------------------全局变量-----------------------------*/
 /* GDT，全局段描述符表 */
@@ -18,7 +19,7 @@ int dispPos;
 
 /* 进程描述表 */
 struct Process procTable[NR_TASKS]; /* 进程描述表 */
-struct Process* procReady;  /* 准备就绪的进程s */
+struct Process* procReady;  /* 准备就绪的进程 */
 
 /* TSS */
 struct TSS tss;
@@ -26,7 +27,15 @@ struct TSS tss;
 /* 控制中断可重入 */
 int kreenter;
 
+/* 中断处理函数 */
 irqHandler irqTable[NR_IRQ];
+
+/* 系统调用 */
+systemCall sysCallTable[NR_SYS_CALL] = {
+    sysGetTicks
+};
+
+int ticks;
 /* ------------------------------------------------------------------*/
 
 extern void restart();
@@ -39,6 +48,7 @@ void kinit()
 {
     dispPos = 0;
     kreenter = 0;
+    ticks = 0;
     
     /* 将GDT拷贝到新地址处 */
     memcpy(&gdt, (void*)(*(u32*)(&gdtPtr[2])),  *((u16*)(&gdtPtr[0]))+1);
@@ -85,6 +95,11 @@ int kmain()
 
     procReady = proc; /* 设置下一个调度的进程 */
 
+    /* 初始化定时器，使其10ms中断一次 */
+    outByte(TIMER_MODE, RATE_GENERATOR);
+    outByte(TIMER0, (u8)(TIMER_FREQ/HZ));
+    outByte(TIMER0, (u8)((TIMER_FREQ/HZ)>>8));
+
     putIrqHandler(CLOCK_IRQ, scheduleTick);
     enableIrq(CLOCK_IRQ);
 
@@ -102,7 +117,8 @@ static void testA()
     while(1)
     {
         dispStr("A ");
-        delay(5);
+        dispInt(getTicks()); /* 系统调用 */
+        mdelay(1000);
     }
 }
 
@@ -112,15 +128,16 @@ static void testB()
     while(1)
     {
         dispStr("B ");
-        delay(5);
+        mdelay(1000);
     }
 }
 
+/* 进程C */
 static void testC()
 {
     while(1)
     {
         dispStr("C ");
-        delay(5);
+        mdelay(1000);
     }
 }

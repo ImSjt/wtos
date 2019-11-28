@@ -15,6 +15,7 @@ extern tss			; TSS
 extern procReady	; 下一个进程
 extern kreenter
 extern irqTable
+extern sysCallTable
 
 [section .bss]
 StackSpace resb 2*1024  ; 分配2K的栈空间
@@ -48,22 +49,24 @@ global pageFault
 global coprError
 
 ; 外部中断
-global  hwint00
-global  hwint01
-global  hwint02
-global  hwint03
-global  hwint04
-global  hwint05
-global  hwint06
-global  hwint07
-global  hwint08
-global  hwint09
-global  hwint10
-global  hwint11
-global  hwint12
-global  hwint13
-global  hwint14
-global  hwint15
+global hwint00
+global hwint01
+global hwint02
+global hwint03
+global hwint04
+global hwint05
+global hwint06
+global hwint07
+global hwint08
+global hwint09
+global hwint10
+global hwint11
+global hwint12
+global hwint13
+global hwint14
+global hwint15
+
+global sysCall
 
 _start:
 	mov esp, StackTop   ; 重新设置栈
@@ -180,7 +183,7 @@ exception:								; 异常处理函数
 	in	al, INT_M_CTLMASK
 	and	al, ~(1 << %1)
 	out	INT_M_CTLMASK, al
-	ret
+	ret	; 返回到save中压入的函数
 %endmacro
 
 ALIGN   16
@@ -270,7 +273,7 @@ save:
 	mov es, dx
 
 	; 将当前栈顶保存下来
-	mov eax, esp
+	mov esi, esp
 
 	; 判断是否重入
 	inc dword [kreenter]
@@ -287,7 +290,10 @@ save:
 	push reenter	; 中断重入
 
 .2:
-	jmp [eax + RETADR - P_STACKBASE] ; 函数调用返回
+	jmp [esi + RETADR - P_STACKBASE] ; 函数调用返回
+
+
+
 
 restart:
 	mov esp, [procReady]				; 指向进程表项
@@ -309,3 +315,11 @@ reenter:
 
 	; 返回进程执行
 	iretd
+
+sysCall:
+	call save ; 保存现场
+	sti		  ; 开中断
+	call [sysCallTable + eax * 4]	; 调用相应的系统调用处理
+	mov [esi + EAXREG - P_STACKBASE], eax	; 将系统调用返回值保存起来
+	cli
+	ret

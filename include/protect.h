@@ -57,11 +57,6 @@ struct TSS
 	u16	iobase;	/* I/O位图基址大于或等于TSS段界限，就表示没有I/O许可位图 */
 };
 
-/* 权限 */
-#define	PRIVILEGE_KRNL	0
-#define	PRIVILEGE_TASK	1
-#define	PRIVILEGE_USER	3
-
 /* GDT 和 IDT 中描述符的个数 */
 #define	GDT_SIZE	INDEX_MAX
 #define IDT_SIZE	256 /* 中断向量 */
@@ -81,14 +76,14 @@ struct TSS
 #define INDEX_MAX           (INDEX_TSS+1)
 
 /* 选择子 */
-#define OFFSET_INDEX        3
+#define OFFSET_INDEX            3
 #define	SELECTOR_DUMMY		    (INDEX_DUMMY << OFFSET_INDEX)
 #define	SELECTOR_KERNEL_CS		(INDEX_KERNEL_CS << OFFSET_INDEX)   /* 内核代码段 */
 #define SELECTOR_KERNEL_DS      (INDEX_KERNEL_DS << OFFSET_INDEX)   /* 内核数据段 */
 #define SELECTOR_USER_CS        ((INDEX_USER_CS << OFFSET_INDEX) | RPL_USER) /* 用户代码段 */
 #define SELECTOR_USER_DS        ((INDEX_USER_DS << OFFSET_INDEX) | RPL_USER) /* 用户数据段 */
 #define SELECTOR_GS             ((INDEX_VIDEO << OFFSET_INDEX) | RPL_USER)
-#define SELECTOR_TSS            (INDEX_TSS << 3)
+#define SELECTOR_TSS            (INDEX_TSS << OFFSET_INDEX)
 
 /* 权限 */
 #define	PRIVILEGE_KRNL	0
@@ -160,6 +155,7 @@ struct TSS
 #define	INT_VECTOR_PROTECTION		0xD
 #define	INT_VECTOR_PAGE_FAULT		0xE
 #define	INT_VECTOR_COPROC_ERR		0x10
+#define INT_VECTOR_SYS_CALL 0x90 /* 系统调用 */
 
 /* 中断向量 */
 #define	INT_VECTOR_IRQ0			0x20
@@ -177,6 +173,8 @@ struct TSS
 #define	FLOPPY_IRQ	6	/* floppy disk */
 #define	PRINTER_IRQ	7
 #define	AT_WINI_IRQ	14	/* at winchester */
+
+#define NR_SYS_CALL 1
 
 /* 虚拟地址转换为物理地址 */
 //#define vir2phys(segBase, vir)	(u32)(((u32)segBase) + (u32)(vir))

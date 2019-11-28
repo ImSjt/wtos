@@ -14,4 +14,6 @@ typedef	unsigned char		u8;
 
 typedef void (*irqHandler)(int);
 
+typedef void* systemCall;
+
 #endif /* _TYPE_H_ */

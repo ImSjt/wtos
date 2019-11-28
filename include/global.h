@@ -21,4 +21,8 @@ extern int kreenter;
 
 extern irqHandler irqTable[];
 
+extern systemCall sysCallTable[];
+
+extern int ticks;
+
 #endif /* _GLOBAL_H_ */

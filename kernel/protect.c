@@ -3,6 +3,7 @@
 #include "string.h"
 #include "irq.h"
 #include "protect.h"
+#include "syscall.h"
 
 /* 异常处理函数 */
 void divideError();
@@ -76,7 +77,14 @@ void initProt()
 	initIdtDesc(INT_VECTOR_PROTECTION, DA_386IGate, generalProtection, PRIVILEGE_KRNL);
 	initIdtDesc(INT_VECTOR_PAGE_FAULT, DA_386IGate, pageFault, PRIVILEGE_KRNL);
 	initIdtDesc(INT_VECTOR_COPROC_ERR, DA_386IGate, coprError, PRIVILEGE_KRNL);
-	
+
+    /*
+     * 调用门是用来做特权级转换
+     * 在权限转移的时候，一般涉及到CPL、RPL（选择子的权限）、目的代码的DPL、调用门的DPL
+     * 要使用调用门，要求CPL和RPL小于或等于调用门的DPL
+     */
+    initIdtDesc(INT_VECTOR_SYS_CALL, DA_386IGate, sysCall, PRIVILEGE_USER);
+    
 	/* 外部中断 */
 	initIdtDesc(INT_VECTOR_IRQ0+0, DA_386IGate, hwint00, PRIVILEGE_KRNL);
 	initIdtDesc(INT_VECTOR_IRQ0+1, DA_386IGate, hwint01, PRIVILEGE_KRNL);
@@ -94,24 +102,6 @@ void initProt()
 	initIdtDesc(INT_VECTOR_IRQ8+5, DA_386IGate, hwint13, PRIVILEGE_KRNL);
 	initIdtDesc(INT_VECTOR_IRQ8+6, DA_386IGate, hwint14, PRIVILEGE_KRNL);
 	initIdtDesc(INT_VECTOR_IRQ8+7, DA_386IGate, hwint15, PRIVILEGE_KRNL);
-
-
-#if 0
-	/* 初始化tss的段描述符 */
-	memset(&tss, 0, sizeof(tss));
-	tss.ss0 = SELECTOR_KERNEL_DS;	/* 暂时只需要使用这一个变量 */
-	initDescriptor(&gdt[INDEX_TSS],
-					vir2phys(seg2phys(SELECTOR_KERNEL_DS), &tss),
-					sizeof(tss)-1,
-					DA_386TSS);
-	tss.iobase = sizeof(tss); /* 没有I/O许可位图 */
-
-	/* 初始化LDT的段描述符 */
-	initDescriptor(&gdt[INDEX_LDT_FIRST], 
-					vir2phys(seg2phys(SELECTOR_KERNEL_DS), procTable[0].ldts),
-					LDT_SIZE * sizeof(struct SegmentDescriptor)-1,
-					DA_LDT);
-#endif
 
     /* 初始化tss，并设置GDT */
     memset(&tss, 0, sizeof(tss));
