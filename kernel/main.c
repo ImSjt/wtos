@@ -87,11 +87,16 @@ int kmain()
         proc[i].regs.gs = SELECTOR_GS;
         proc[i].regs.esp = (u32)proc[i].stack + STACK_SIZE;
         proc[i].regs.eflags = 0x1202;	/* IF=1, IOPL=1, bit 2 is always 1.iret后，会打开中断和设置IO允许位 */
+        proc[i].ticks = 0;
     }
 
     proc[0].regs.eip = (u32)testA;
     proc[1].regs.eip = (u32)testB;
     proc[2].regs.eip = (u32)testC;
+
+    proc[0].priority = 15;
+    proc[1].priority = 10;
+    proc[2].priority = 5;
 
     procReady = proc; /* 设置下一个调度的进程 */
 
@@ -117,8 +122,7 @@ static void testA()
     while(1)
     {
         dispStr("A ");
-        dispInt(getTicks()); /* 系统调用 */
-        mdelay(1000);
+        mdelay(10);
     }
 }
 
@@ -128,7 +132,7 @@ static void testB()
     while(1)
     {
         dispStr("B ");
-        mdelay(1000);
+        mdelay(10);
     }
 }
 
@@ -138,6 +142,6 @@ static void testC()
     while(1)
     {
         dispStr("C ");
-        mdelay(1000);
+        mdelay(10);
     }
 }

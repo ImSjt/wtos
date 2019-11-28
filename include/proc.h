@@ -36,6 +36,8 @@ struct Process
 {
 	struct StackFrame regs;          /* process registers saved in stack frame */
     char stack[STACK_SIZE];
+    int priority;
+    int ticks;
 	u32 pid;                   /* process id passed in from MM */
 	char name[16];           /* name of the process */
 };
