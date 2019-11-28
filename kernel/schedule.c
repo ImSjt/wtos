@@ -32,7 +32,7 @@ void scheduleTick(int n)
     /* 中断重入 */
     if(kreenter != 0)
     {
-        dispStr("!");
+        //dispStr("!");
         return;
     }
 

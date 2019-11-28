@@ -26,4 +26,7 @@ void scheduleTick(int n);
 
 void mdelay(int ms);
 
+void enableInt();
+void disableInt();
+
 #endif /* _IRQ_H_ */

@@ -7,6 +7,8 @@ global outByte
 global inByte
 global disableIrq
 global enableIrq
+global enableInt
+global disableInt
 
 ; ------------------------------------------------------------------------
 ;                  void outByte(u16 port, u8 value);
@@ -87,3 +89,19 @@ enable8:
         out     INT_S_CTLMASK, al       ; clear bit at slave 8259
         popf
         ret
+
+; ------------------------------------------------------------------------
+;                  void enableInt();
+; ------------------------------------------------------------------------
+enableInt:
+	sti
+	ret
+
+; ------------------------------------------------------------------------
+;                  void disableInt();
+; ------------------------------------------------------------------------
+disableInt:
+	inc byte [gs:100]
+	cli
+	inc byte [gs:102]
+	ret

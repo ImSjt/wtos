@@ -4,6 +4,7 @@
 #include "irq.h"
 #include "proc.h"
 #include "syscall.h"
+#include "proto.h"
 
 /* -----------------------------全局变量-----------------------------*/
 /* GDT，全局段描述符表 */
@@ -90,7 +91,7 @@ int kmain()
         proc[i].ticks = 0;
     }
 
-    proc[0].regs.eip = (u32)testA;
+    proc[0].regs.eip = (u32)taskTTY;
     proc[1].regs.eip = (u32)testB;
     proc[2].regs.eip = (u32)testC;
 
@@ -100,13 +101,8 @@ int kmain()
 
     procReady = proc; /* 设置下一个调度的进程 */
 
-    /* 初始化定时器，使其10ms中断一次 */
-    outByte(TIMER_MODE, RATE_GENERATOR);
-    outByte(TIMER0, (u8)(TIMER_FREQ/HZ));
-    outByte(TIMER0, (u8)((TIMER_FREQ/HZ)>>8));
-
-    putIrqHandler(CLOCK_IRQ, scheduleTick);
-    enableIrq(CLOCK_IRQ);
+    initTime();
+    initKeyboard();
 
     restart(); /* 启动第一个进程 */
 
@@ -121,7 +117,7 @@ static void testA()
 {
     while(1)
     {
-        dispStr("A ");
+        //dispStr("A ");
         mdelay(10);
     }
 }
@@ -131,7 +127,7 @@ static void testB()
 {
     while(1)
     {
-        dispStr("B ");
+        //dispStr("B ");
         mdelay(10);
     }
 }
@@ -141,7 +137,7 @@ static void testC()
 {
     while(1)
     {
-        dispStr("C ");
+        //dispStr("C ");
         mdelay(10);
     }
 }
