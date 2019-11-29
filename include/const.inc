@@ -27,7 +27,7 @@ TSS3_S_SP0	equ	4
 ; 描述符索引
 INDEX_KERNEL_CS     equ		1
 INDEX_KERNEL_DS     equ		2
-INDEX_TSS           equ		6
+INDEX_TSS           equ		8
 
 ; 选择子
 OFFSET_INDEX        equ		3

@@ -10,11 +10,13 @@ org 0100h	; 段内预留0100h大小作为临时栈使用
 ; 段基址，段界限，段属性
 ; 段的起始地址都是从0开始，即逻辑地址等于线性地址
 LABEL_GDT: Descriptor 0, 0, 0
-LABEL_DESC_KERNEL_CS: Descriptor 0, 0FFFFFh, DA_CR|DA_32|DA_LIMIT_4K       	 ; 0-4G，内核代码段
-LABEL_DESC_KERNEL_DS: Descriptor 0, 0FFFFFh,  DA_DRW|DA_32|DA_LIMIT_4K    	 ; 0-4G，内核数据段
-LABEL_DESC_USER_CS: Descriptor 0, 0FFFFFh, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3   ; 0-4G，用户代码段
-LABEL_DESC_USER_DS: Descriptor 0, 0FFFFFh,  DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3 ; 0-4G，用户数据段
-LABEL_DESC_VIDEO: Descriptor 0B8000h, 0FFFFFh,  DA_DRW|DA_DPL3         		 ; 显存首地址，显存段
+LABEL_DESC_KERNEL_CS: Descriptor 0, 0FFFFFh, DA_CR|DA_32|DA_LIMIT_4K       	  ; 0-4G，内核代码段
+LABEL_DESC_KERNEL_DS: Descriptor 0, 0FFFFFh,  DA_DRW|DA_32|DA_LIMIT_4K    	  ; 0-4G，内核数据段
+LABEL_DESC_TASK_CS: Descriptor 0, 0FFFFFh, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL1 	  ; 0-4G，内核代码段
+LABEL_DESC_TASK_DS: Descriptor 0, 0FFFFFh,  DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL1 ; 0-4G，内核数据段
+LABEL_DESC_USER_CS: Descriptor 0, 0FFFFFh, DA_CR|DA_32|DA_LIMIT_4K|DA_DPL3    ; 0-4G，用户代码段
+LABEL_DESC_USER_DS: Descriptor 0, 0FFFFFh,  DA_DRW|DA_32|DA_LIMIT_4K|DA_DPL3  ; 0-4G，用户数据段
+LABEL_DESC_VIDEO: Descriptor 0B8000h, 0FFFFFh,  DA_DRW|DA_DPL3         		  ; 显存首地址，显存段
 
 GdtLen equ $-LABEL_GDT
 
@@ -25,6 +27,8 @@ dd BaseOfLoaderPhyAddr + LABEL_GDT  ; 段物理地址
 ; GDT选择子
 SelectorKernelCS equ LABEL_DESC_KERNEL_CS - LABEL_GDT				; 内核代码段选择子
 SelectorKernelDS equ LABEL_DESC_KERNEL_DS - LABEL_GDT				; 内核数据段选择子
+SelectorTaskCS equ LABEL_DESC_TASK_CS - LABEL_GDT + SA_RPL1			; 用户代码段选择子
+SelectorTaskDS equ LABEL_DESC_TASK_DS - LABEL_GDT + SA_RPL1			; 用户数据段选择子
 SelectorUserCS equ LABEL_DESC_USER_CS - LABEL_GDT + SA_RPL3			; 用户代码段选择子
 SelectorUserDS equ LABEL_DESC_USER_DS - LABEL_GDT + SA_RPL3			; 用户数据段选择子
 SelectorVideo equ LABEL_DESC_VIDEO - LABEL_GDT + SA_RPL3			; 显存段选择子

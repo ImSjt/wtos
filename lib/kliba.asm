@@ -101,7 +101,5 @@ enableInt:
 ;                  void disableInt();
 ; ------------------------------------------------------------------------
 disableInt:
-	inc byte [gs:100]
 	cli
-	inc byte [gs:102]
 	ret

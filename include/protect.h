@@ -69,10 +69,12 @@ struct TSS
 #define	INDEX_DUMMY			0
 #define INDEX_KERNEL_CS     1
 #define INDEX_KERNEL_DS     2
-#define INDEX_USER_CS       3
-#define INDEX_USER_DS       4
-#define INDEX_VIDEO         5
-#define INDEX_TSS           6
+#define INDEX_TASK_CS       3
+#define INDEX_TASK_DS       4
+#define INDEX_USER_CS       5
+#define INDEX_USER_DS       6
+#define INDEX_VIDEO         7
+#define INDEX_TSS           8
 #define INDEX_MAX           (INDEX_TSS+1)
 
 /* 选择子 */
@@ -80,6 +82,8 @@ struct TSS
 #define	SELECTOR_DUMMY		    (INDEX_DUMMY << OFFSET_INDEX)
 #define	SELECTOR_KERNEL_CS		(INDEX_KERNEL_CS << OFFSET_INDEX)   /* 内核代码段 */
 #define SELECTOR_KERNEL_DS      (INDEX_KERNEL_DS << OFFSET_INDEX)   /* 内核数据段 */
+#define SELECTOR_TASK_CS        ((INDEX_TASK_CS << OFFSET_INDEX) | RPL_TASK) /* 内核任务代码段 */
+#define SELECTOR_TASK_DS        ((INDEX_TASK_DS << OFFSET_INDEX) | RPL_TASK) /* 内核任务数据段 */
 #define SELECTOR_USER_CS        ((INDEX_USER_CS << OFFSET_INDEX) | RPL_USER) /* 用户代码段 */
 #define SELECTOR_USER_DS        ((INDEX_USER_DS << OFFSET_INDEX) | RPL_USER) /* 用户数据段 */
 #define SELECTOR_GS             ((INDEX_VIDEO << OFFSET_INDEX) | RPL_USER)

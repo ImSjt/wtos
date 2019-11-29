@@ -67,7 +67,6 @@ void kinit()
     *idtBase = (u32)(&idt);
 
     initProt();
-
 }
 
 int kmain()
@@ -77,7 +76,25 @@ int kmain()
     struct Process* proc = procTable;
     int i;
 
-    for(i = 0; i < NR_TASKS; ++i)
+    /* 内核进程 */
+    for(i = 0; i < 1; ++i)
+    {
+        proc[i].regs.cs = SELECTOR_TASK_CS;
+        proc[i].regs.ds = SELECTOR_TASK_DS;
+        proc[i].regs.es = SELECTOR_TASK_DS;
+        proc[i].regs.fs = SELECTOR_TASK_DS;
+        proc[i].regs.ss = SELECTOR_TASK_DS;
+        proc[i].regs.gs = SELECTOR_GS;
+        proc[i].regs.esp = (u32)proc[i].stack + STACK_SIZE;
+        proc[i].regs.eflags = 0x1202;	/* IF=1, IOPL=1, bit 2 is always 1.iret后 */
+        proc[i].ticks = 0;
+    }
+
+    /* 内核进程 */    
+    proc[0].regs.eip = (u32)taskTTY;
+
+    /* 用户进程 */
+    for(i = 1; i < NR_TASKS; ++i)
     {
         /* 初始化寄存器的值，cs指向LDT中第一个段描述符，其它指向第二个 */
         proc[i].regs.cs = SELECTOR_USER_CS;
@@ -87,11 +104,10 @@ int kmain()
         proc[i].regs.ss = SELECTOR_USER_DS;
         proc[i].regs.gs = SELECTOR_GS;
         proc[i].regs.esp = (u32)proc[i].stack + STACK_SIZE;
-        proc[i].regs.eflags = 0x1202;	/* IF=1, IOPL=1, bit 2 is always 1.iret后，会打开中断和设置IO允许位 */
+        proc[i].regs.eflags = 0x1202;	/* IF=1, IOPL=1, bit 2 is always 1.iret后 */
         proc[i].ticks = 0;
     }
-
-    proc[0].regs.eip = (u32)taskTTY;
+    
     proc[1].regs.eip = (u32)testB;
     proc[2].regs.eip = (u32)testC;
 
