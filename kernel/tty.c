@@ -69,12 +69,7 @@ void inprocess(struct TTY* tty, u32 key)
             {
                 if((key & FLAG_SHIFT_L) || (key & FLAG_SHIFT_R))
                 {
-                    disableInt();
-                    outByte(CRTC_ADDR_REG, START_ADDR_H);
-                    outByte(CRTC_DATA_REG, ((80*15)>>8)&0xFF);
-                    outByte(CRTC_ADDR_REG, START_ADDR_L);
-                    outByte(CRTC_DATA_REG, (80*15)&0xFF);
-                    enableInt();
+                    scrollScreen(tty->console, SCR_UP);
                 }
                 break;
             }
@@ -82,7 +77,7 @@ void inprocess(struct TTY* tty, u32 key)
             {
                 if((key & FLAG_SHIFT_L) || (key & FLAG_SHIFT_R))
                 {
-
+                    scrollScreen(tty->console, SCR_DOWN);
                 }
 
                 break;

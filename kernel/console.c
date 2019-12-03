@@ -77,3 +77,24 @@ void selectConsole(int nr)
     /* 设置显存起始地址 */
     setVideoStartAddr(consoleTable[nr].curStartAddr);
 }
+
+void scrollScreen(struct Console* con, int dir)
+{
+    if(dir == SCR_UP)
+    {
+        if(con->curStartAddr > con->originalAddr)
+            con->curStartAddr -= SCREEN_WIDTH;
+    }
+    else if(dir == SCR_DOWN)
+    {
+        if(con->curStartAddr + SCREEN_SIZE < con->originalAddr + con->memLimit)
+            con->curStartAddr += SCREEN_WIDTH;
+    }
+    else
+    {
+
+    }
+
+    setVideoStartAddr(con->curStartAddr);
+    setCursor(con->cursor);
+}
