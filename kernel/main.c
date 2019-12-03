@@ -118,7 +118,6 @@ int kmain()
     procReady = proc; /* 设置下一个调度的进程 */
 
     initTime();
-    initKeyboard();
 
     restart(); /* 启动第一个进程 */
 

@@ -1,5 +1,6 @@
 #ifndef	_KEYBOARD_H_
 #define	_KEYBOARD_H_
+#include "tty.h"
 
 /************************************************************************/
 /*                          Macros Declaration                          */
@@ -128,6 +129,6 @@ struct KeyboardBuf
 	char	buf[KB_IN_BYTES];	/* 缓冲区 */
 };
 
-void keyboardRead();
+void keyboardRead(struct TTY* tty);
 
 #endif /* _KEYBOARD_H_ */

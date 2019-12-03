@@ -5,6 +5,8 @@
 #include "keyboard.h"
 #include "keymap.h"
 #include "proto.h"
+#include "tty.h"
+#include "console.h"
 
 static struct KeyboardBuf kbBuf;
 
@@ -60,7 +62,7 @@ void initKeyboard()
     enableIrq(KEYBOARD_IRQ);
 }
 
-void keyboardRead()
+void keyboardRead(struct TTY* tty)
 {
 	u8	code;
 	char output[2];
@@ -134,7 +136,7 @@ void keyboardRead()
              key |= altL   ? FLAG_ALT_L   : 0;
              key |= altR   ? FLAG_ALT_R   : 0;
 
-             inprocess(key);
+             inprocess(tty, key);
         }
 	}
 }

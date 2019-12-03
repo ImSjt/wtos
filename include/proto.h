@@ -5,6 +5,5 @@
 void initTime();
 void initKeyboard();
 void taskTTY();
-void inprocess(u32 key);
 
 #endif /* _PROTO_H_ */

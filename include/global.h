@@ -3,6 +3,8 @@
 #include "type.h"
 #include "protect.h"
 #include "proc.h"
+#include "tty.h"
+#include "console.h"
 
 extern u8 gdtPtr[6];                       /* 0~15:Limit  16~47:Base */
 extern struct SegmentDescriptor gdt[GDT_SIZE];    /* GDT */
@@ -24,5 +26,9 @@ extern irqHandler irqTable[];
 extern systemCall sysCallTable[];
 
 extern int ticks;
+
+extern struct TTY ttyTable[];
+extern struct Console consoleTable[];
+extern int curConsole;
 
 #endif /* _GLOBAL_H_ */
