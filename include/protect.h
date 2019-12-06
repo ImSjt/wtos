@@ -178,7 +178,7 @@ struct TSS
 #define	PRINTER_IRQ	7
 #define	AT_WINI_IRQ	14	/* at winchester */
 
-#define NR_SYS_CALL 1
+#define NR_SYS_CALL 2
 
 /* 虚拟地址转换为物理地址 */
 //#define vir2phys(segBase, vir)	(u32)(((u32)segBase) + (u32)(vir))

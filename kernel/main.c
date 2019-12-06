@@ -5,6 +5,7 @@
 #include "proc.h"
 #include "syscall.h"
 #include "proto.h"
+#include "stdio.h"
 
 /* -----------------------------全局变量-----------------------------*/
 /* GDT，全局段描述符表 */
@@ -33,7 +34,8 @@ irqHandler irqTable[NR_IRQ];
 
 /* 系统调用 */
 systemCall sysCallTable[NR_SYS_CALL] = {
-    sysGetTicks
+    sysGetTicks,
+    sysWrite
 };
 
 int ticks;
@@ -108,12 +110,16 @@ int kmain()
         proc[i].ticks = 0;
     }
     
-    proc[1].regs.eip = (u32)testB;
-    proc[2].regs.eip = (u32)testC;
+    proc[1].regs.eip = (u32)testA;
+    proc[2].regs.eip = (u32)testB;
 
     proc[0].priority = 15;
     proc[1].priority = 10;
     proc[2].priority = 5;
+
+    proc[0].tty = 0;
+    proc[1].tty = 1;
+    proc[2].tty = 2;
 
     procReady = proc; /* 设置下一个调度的进程 */
 
@@ -133,7 +139,8 @@ static void testA()
     while(1)
     {
         //dispStr("A ");
-        mdelay(10);
+        printf("testA<%x>", getTicks());
+        mdelay(100);
     }
 }
 
@@ -143,7 +150,8 @@ static void testB()
     while(1)
     {
         //dispStr("B ");
-        mdelay(10);
+        printf("B");
+        mdelay(100);
     }
 }
 
@@ -153,6 +161,7 @@ static void testC()
     while(1)
     {
         //dispStr("C ");
+        printf("C");
         mdelay(10);
     }
 }

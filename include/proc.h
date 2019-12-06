@@ -40,6 +40,7 @@ struct Process
     int ticks;
 	u32 pid;                   /* process id passed in from MM */
 	char name[16];           /* name of the process */
+    int tty;
 };
 
 #endif /* _PROC_H_ */

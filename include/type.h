@@ -16,4 +16,6 @@ typedef void (*irqHandler)(int);
 
 typedef void* systemCall;
 
+typedef char* va_list;
+
 #endif /* _TYPE_H_ */

@@ -7,6 +7,8 @@ global memcpy
 global memset
 global dispStr
 global dispColorStr
+global strcpy
+global strlen
 
 ; ------------------------------------------------------------------------
 ; void* memcpy(void* dest, void* src, int size);
@@ -153,3 +155,49 @@ dispColorStr:
 
 	pop	ebp
 	ret
+
+; ------------------------------------------------------------------------
+; char* strcpy(char* dst, char* src);
+; ------------------------------------------------------------------------
+strcpy:
+	push    ebp
+	mov     ebp, esp
+
+	mov     esi, [ebp + 12] ; Source
+	mov     edi, [ebp + 8]  ; Destination
+
+.1:
+	mov     al, [esi]               ; ┓
+	inc     esi                     ; ┃
+					; ┣ 逐字节移动
+	mov     byte [edi], al          ; ┃
+	inc     edi                     ; ┛
+
+	cmp     al, 0           ; 是否遇到 '\0'
+	jnz     .1              ; 没遇到就继续循环，遇到就结束
+
+	mov     eax, [ebp + 8]  ; 返回值
+
+	pop     ebp
+	ret                     ; 函数结束，返回
+
+; ------------------------------------------------------------------------
+; int strlen(char* str);
+; ------------------------------------------------------------------------
+strlen:
+        push    ebp
+        mov     ebp, esp
+
+        mov     eax, 0                  ; 字符串长度开始是 0
+        mov     esi, [ebp + 8]          ; esi 指向首地址
+
+.1:
+        cmp     byte [esi], 0           ; 看 esi 指向的字符是否是 '\0'
+        jz      .2                      ; 如果是 '\0'，程序结束
+        inc     esi                     ; 如果不是 '\0'，esi 指向下一个字符
+        inc     eax                     ;         并且，eax 自加一
+        jmp     .1                      ; 如此循环
+
+.2:
+        pop     ebp
+        ret                             ; 函数结束，返回

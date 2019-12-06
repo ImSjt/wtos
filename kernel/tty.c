@@ -18,6 +18,7 @@ static void initTTY(struct TTY* tty);
 static void ttyDoRread(struct TTY* tty);
 static void ttyDoWrite(struct TTY* tty);
 static int isCurConsole(struct Console* con);
+static void putKey(struct TTY* tty, u32 key);
 
 void taskTTY()
 {
@@ -49,15 +50,7 @@ void inprocess(struct TTY* tty, u32 key)
 
     if(!(key & FLAG_EXT))
     {
-        /* 读取数据到tty缓存中 */
-        if(tty->inBufCount < TTY_IN_BYTES)
-        {
-            *(tty->inBufHead) = key;
-            tty->inBufHead++;
-            if(tty->inBufHead == tty->inBuf + TTY_IN_BYTES)
-                tty->inBufHead = tty->inBuf;
-            tty->inBufCount++;
-        }
+        putKey(tty, key);
     }
     else
     {
@@ -80,6 +73,16 @@ void inprocess(struct TTY* tty, u32 key)
                     scrollScreen(tty->console, SCR_DOWN);
                 }
 
+                break;
+            }
+            case ENTER:
+            {
+                putKey(tty, '\n');
+                break;
+            }
+            case BACKSPACE:
+            {
+                putKey(tty, '\b');
                 break;
             }
             case F1:
@@ -145,4 +148,35 @@ static void ttyDoWrite(struct TTY* tty)
 static int isCurConsole(struct Console* con)
 {
     return con == &consoleTable[curConsole];
+}
+
+static void putKey(struct TTY* tty, u32 key)
+{
+    /* 读取数据到tty缓存中 */
+    if(tty->inBufCount < TTY_IN_BYTES)
+    {
+        *(tty->inBufHead) = key;
+        tty->inBufHead++;
+        if(tty->inBufHead == tty->inBuf + TTY_IN_BYTES)
+            tty->inBufHead = tty->inBuf;
+        tty->inBufCount++;
+    }
+}
+
+void ttyWrite(struct TTY* tty, char* buf, int len)
+{
+    char* p = buf;
+    int i = len;
+
+    while(i--)
+    {
+        outChar(tty->console, *p++);
+    }
+}
+
+int sysWrite(char * buf, int len, struct Process * proc)
+{
+    ttyWrite(&ttyTable[proc->tty], buf, len);
+
+    return 0;
 }

@@ -318,8 +318,12 @@ reenter:
 
 sysCall:
 	call save ; 保存现场
+	push dword [procReady]
 	sti		  ; 开中断
+	push ecx
+	push ebx
 	call [sysCallTable + eax * 4]	; 调用相应的系统调用处理
+	add esp, 4*3
 	mov [esi + EAXREG - P_STACKBASE], eax	; 将系统调用返回值保存起来
 	cli
 	ret

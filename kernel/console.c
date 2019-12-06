@@ -5,16 +5,54 @@
 #include "console.h"
 
 static void setCursor(u32 position);
+static void flush(struct Console* console);
 
 void outChar(struct Console* console, char ch)
 {
-    u8* vmem = (u8*)(V_MEM_BASE + console->cursor * 2);
+    u8* vmem = (u8*)(V_MEM_BASE + console->cursor * 2); /* 得到显存位置 */
 
-    *vmem++ = ch;
-    *vmem++ = DEFAULT_CHAR_COLOR;
-    console->cursor++;
+    switch (ch)
+    {
+        case '\n': /* 换行 */
+        {
+            if(console->cursor < console->originalAddr + console->memLimit - SCREEN_WIDTH)
+            {
+                console->cursor = console->originalAddr + SCREEN_WIDTH * \
+                                    ((console->cursor - console->originalAddr) / SCREEN_WIDTH + 1);
+            }
 
-    setCursor(console->cursor);    
+            break;
+        }
+        case '\b': /* 删除 */
+        {
+            if(console->cursor > console->originalAddr)
+            {
+                console->cursor--;
+                *(vmem-2) = ' ';
+                *(vmem-1) = DEFAULT_CHAR_COLOR;
+            }
+            
+            break;
+        }
+        default:
+        {
+            if(console->cursor < console->originalAddr + console->memLimit - 1)
+            {
+                *vmem++ = ch;
+                *vmem++ = DEFAULT_CHAR_COLOR;
+                console->cursor++;
+            }
+            
+            break;
+        }
+    }
+
+    while(console->cursor >= console->curStartAddr + SCREEN_SIZE)
+    {
+        scrollScreen(console, SCR_DOWN);
+    }
+
+    flush(console);
 }
 
 static void setCursor(u32 position)
@@ -97,4 +135,12 @@ void scrollScreen(struct Console* con, int dir)
 
     setVideoStartAddr(con->curStartAddr);
     setCursor(con->cursor);
+}
+
+static void flush(struct Console* console)
+{
+    setCursor(console->cursor);
+
+    if(console == &consoleTable[curConsole])
+        setVideoStartAddr(console->curStartAddr);
 }

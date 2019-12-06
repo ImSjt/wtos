@@ -10,4 +10,8 @@ void dispInt(int input);
 
 void delay(int time);
 
+char* itoa(char* str, int num);
+char* strcpy(char* dst, char* src);
+int strlen(char* str);
+
 #endif /* _STRING_H_ */
