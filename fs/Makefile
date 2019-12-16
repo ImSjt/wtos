@@ -1,4 +1,4 @@
-OBJ = string.o kliba.o klib.o printf.o vsprintf.o assert.o
+OBJ = main.o
 
 all : build-in.o
 

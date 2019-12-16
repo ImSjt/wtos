@@ -1,24 +1,28 @@
 
-NR_GET_TICKS equ 0
-NR_WRITE	 equ 1
+;NR_TICKS	equ 0
+NR_PRINTX	equ 0
+NR_SENDREC	equ 1
 
 INT_VECTOR_SYS_CALL equ 0x90
 
-global getTicks
-global write
+global printx
+global sendrec
 
 bits 32
 [section .text]
 
-getTicks:
-	mov eax, NR_GET_TICKS		; 通过寄存器来传递系统调用号
-	int INT_VECTOR_SYS_CALL		; 触发系统调用
-	ret
+; 支持传递三个参数，从右到左分别为 edx、ecx、ebx
 
-write:
-	mov eax, NR_WRITE
-	mov ebx, [esp+4]
-	mov ecx, [esp+8]
+printx:
+	mov eax, NR_PRINTX
+	mov edx, [esp+4]
 	int INT_VECTOR_SYS_CALL
 	ret
 
+sendrec:
+	mov eax, NR_SENDREC
+	mov ebx, [esp+4]		; function
+	mov ecx, [esp+8]		; obj
+	mov edx, [esp+12]		; msg
+	int INT_VECTOR_SYS_CALL
+	ret

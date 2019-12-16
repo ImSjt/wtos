@@ -9,7 +9,9 @@ int printf(const char* fmt, ...)
 
     va_list arg = (va_list)((char*)(&fmt) + 4); /* 指向参数列表 */
     i = vsprintf(buf, fmt, arg);
-    write(buf, i);
+
+    buf[i] = '\0';
+    printx(buf);
 
     return i;
 }

@@ -26,10 +26,11 @@ DASMOUTPUT	= kernel.bin.asm
 
 OBJ_LIB		= $(TOPDIR)/lib/build-in.o
 OBJ_KERNEL	= $(TOPDIR)/kernel/build-in.o
-OBJ			= $(OBJ_KERNEL) $(OBJ_LIB)
+OBJ_FS		= $(TOPDIR)/fs/build-in.o
+OBJ			= $(OBJ_KERNEL) $(OBJ_LIB) $(OBJ_FS)
 
-.PHONY : all boot kernel lib
-all : boot kernel lib
+.PHONY : all boot kernel lib fs
+all : boot kernel lib fs
 	ld $(LDFLAGS) $(LDADDR) -o $(TARGET) $(OBJ)
 
 boot :
@@ -40,6 +41,9 @@ kernel :
 
 lib :
 	make -C $(TOPDIR)/lib/
+
+fs : 
+	make -C $(TOPDIR)/fs/
 
 disasm :
 	$(DASM) $(DASMFLAGS) $(TARGET) > $(DASMOUTPUT)

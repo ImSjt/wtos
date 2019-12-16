@@ -9,6 +9,7 @@ global disableIrq
 global enableIrq
 global enableInt
 global disableInt
+global portRead
 
 ; ------------------------------------------------------------------------
 ;                  void outByte(u16 port, u8 value);
@@ -102,4 +103,16 @@ enableInt:
 ; ------------------------------------------------------------------------
 disableInt:
 	cli
+	ret
+
+; ------------------------------------------------------------------------
+;                  void portRead(u16 port, void* buf, int n);
+; ------------------------------------------------------------------------
+portRead:
+	mov	edx, [esp + 4]		; port
+	mov	edi, [esp + 4 + 4]	; buf
+	mov	ecx, [esp + 4 + 4 + 4]	; n
+	shr	ecx, 1
+	cld
+	rep	insw
 	ret

@@ -218,11 +218,26 @@ ALIGN   16
 hwint07:                ; Interrupt routine for irq 7 (printer)
 	hwint_master	7
 
-%macro  hwint_slave     1
-    push    %1
-    call    doIrq
-    add     esp, 4
-    hlt
+%macro	hwint_slave		1
+	call	save
+	in	al, INT_S_CTLMASK
+	or	al, (1 << (%1 - 8))
+	out	INT_S_CTLMASK, al
+
+	; 主片和从片都需要值EOI
+	mov	al, EOI
+	out	INT_M_CTL, al
+	nop
+	out	INT_S_CTL, al
+	sti
+	push	%1
+	call	[irqTable + 4 * %1]
+	pop	ecx
+	cli
+	in	al, INT_S_CTLMASK
+	and	al, ~(1 << (%1 - 8))
+	out	INT_S_CTLMASK, al
+	ret
 %endmacro
 
 ALIGN   16
@@ -265,12 +280,16 @@ save:
 	push fs
 	push gs
 
+	mov esi, edx ; 这个寄存器用来系统调用传参的
+	
 	; 切换到内核的段
 	; 在从低优先级到高优先级跳转的时候，硬件自动将ss和esp设置成TSS中设置的ss和esp
 	; 并将原来的ss、esp、eflag、cs、eip压入栈中
 	mov dx, ss
 	mov ds, dx
 	mov es, dx
+
+	mov edx, esi
 
 	; 将当前栈顶保存下来
 	mov esi, esp
@@ -294,7 +313,7 @@ save:
 
 
 
-
+; 可能切换进程
 restart:
 	mov esp, [procReady]				; 指向进程表项
 	;lldt [esp + P_LDT_SEL]				; 加载LDT
@@ -318,12 +337,17 @@ reenter:
 
 sysCall:
 	call save ; 保存现场
-	push dword [procReady]
 	sti		  ; 开中断
+
+	; 压入参数，从参数列表的右边到左边，4个参数，最后一个为当前进程，从右到左三个分别为edx,ecx,ebx
+	; f(arg1, arg2, arg3, struct Process* p)
+	push dword [procReady]
+	push edx
 	push ecx
 	push ebx
 	call [sysCallTable + eax * 4]	; 调用相应的系统调用处理
-	add esp, 4*3
+	add esp, 4*4
+	
 	mov [esi + EAXREG - P_STACKBASE], eax	; 将系统调用返回值保存起来
 	cli
 	ret

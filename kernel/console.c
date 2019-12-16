@@ -133,8 +133,10 @@ void scrollScreen(struct Console* con, int dir)
 
     }
 
-    setVideoStartAddr(con->curStartAddr);
     setCursor(con->cursor);
+
+    if(con == &consoleTable[curConsole])
+        setVideoStartAddr(con->curStartAddr);
 }
 
 static void flush(struct Console* console)

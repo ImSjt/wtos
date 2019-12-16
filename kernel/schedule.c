@@ -8,20 +8,24 @@ void schedule()
     while(tick <= 0)
     {
         int i;
-        for(i = 0; i < NR_TASKS; ++i)
+        for(i = 0; i < NR_TOTAL_PROCS; ++i)
         {
-            if(tick < procTable[i].ticks)
+            if(procTable[i].flag == 0)
             {
-                procReady = &procTable[i];
-                tick = procTable[i].ticks;
+                if(tick < procTable[i].ticks)
+                {
+                    procReady = &procTable[i];
+                    tick = procTable[i].ticks;
+                }
             }
         }
 
         if(tick <= 0)
         {
-            for(i = 0; i < NR_TASKS; ++i)
+            for(i = 0; i < NR_TOTAL_PROCS; ++i)
             {
-                procTable[i].ticks = procTable[i].priority;
+                if(procTable[i].flag == 0)
+                    procTable[i].ticks = procTable[i].priority;
             }
         }
     }

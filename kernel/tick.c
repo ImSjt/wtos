@@ -4,17 +4,27 @@
 #include "irq.h"
 #include "protect.h"
 #include "type.h"
+#include "systask.h"
+#include "ipc.h"
+#include "proc.h"
 
-int sysGetTicks()
+int getTicks()
 {
-    return ticks;
+    struct Message msg;
+    memset(&msg, 0, sizeof(msg));
+
+    msg.type = GET_TICKS;
+    ipc(BOTH, P_SYSTASK, &msg);
+
+    return msg.RETVAL;
 }
 
 void mdelay(int ms)
 {
-    int t = getTicks();   
+    int t = getTicks();
 
-    while((getTicks()-t)*1000/HZ < ms);
+    while((getTicks()-t)*1000/HZ < ms)
+    {}
 }
 
 void initTime()

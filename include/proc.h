@@ -4,10 +4,42 @@
 #include "protect.h"
 
 /* 最大进程个数 */
-#define NR_TASKS 3
+#define NR_TASKS 4
+#define NR_PROCS 2
+#define NR_TOTAL_PROCS (NR_TASKS+NR_PROCS)
+
+/* 系统进程 */
+#define P_TTY       0
+#define P_SYSTASK   1
+#define P_TASK_HD	2
+#define P_TASK_FS   3
+
+/* obj */
+#define ANY	(NR_TOTAL_PROCS + 10)
+#define INTERRUPT	-10
+
+#define NO_TASK		(NR_TASKS + NR_PROCS + 20)
 
 /* 进程栈大小 */
 #define STACK_SIZE 4096
+
+#define proc2pid(x) (x - procTable)
+#define pid2proc(x) (&procTable[x])
+
+#if 0
+enum msgtype
+{
+	HARD_INT = 1,
+
+	/* SYS task */
+	GET_TICKS = 2,
+};
+#endif
+
+#define HARD_INT 1
+#define GET_TICKS 2
+
+#define DEV_OPEN 1001
 
 struct StackFrame
 {
@@ -41,6 +73,19 @@ struct Process
 	u32 pid;                   /* process id passed in from MM */
 	char name[16];           /* name of the process */
     int tty;
+
+    /* IPC */
+    int flag;
+    int recvfrom;
+    int sendto;
+    int hasIntMsg;
+    struct Message* msg;    /* 暂存消息 */
+    struct Process* sending;
+    struct Process* nextSending;
 };
+
+void schedule();
+int ipc(int function, int obj, struct Message* msg);
+void informInt(int taskNr);
 
 #endif /* _PROC_H_ */

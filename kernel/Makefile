@@ -1,5 +1,5 @@
 OBJ = kernel.o main.o protect.o i8259.o schedule.o syscall.o tick.o keyboard.o tty.o \
-		console.o
+		console.o ipc.o systask.o proc.o hd.o
 
 all : build-in.o
 

@@ -6,6 +6,10 @@
 #include "syscall.h"
 #include "proto.h"
 #include "stdio.h"
+#include "ipc.h"
+#include "systask.h"
+#include "fs.h"
+#include "hd.h"
 
 /* -----------------------------全局变量-----------------------------*/
 /* GDT，全局段描述符表 */
@@ -20,7 +24,7 @@ struct Gate idt[IDT_SIZE];
 int dispPos;
 
 /* 进程描述表 */
-struct Process procTable[NR_TASKS]; /* 进程描述表 */
+struct Process procTable[NR_TOTAL_PROCS]; /* 进程描述表 */
 struct Process* procReady;  /* 准备就绪的进程 */
 
 /* TSS */
@@ -34,8 +38,8 @@ irqHandler irqTable[NR_IRQ];
 
 /* 系统调用 */
 systemCall sysCallTable[NR_SYS_CALL] = {
-    sysGetTicks,
-    sysWrite
+    sysPrintx,
+    sysSendrec
 };
 
 int ticks;
@@ -79,8 +83,9 @@ int kmain()
     int i;
 
     /* 内核进程 */
-    for(i = 0; i < 1; ++i)
+    for(i = 0; i < NR_TASKS; ++i)
     {
+        proc[i].pid = i;
         proc[i].regs.cs = SELECTOR_TASK_CS;
         proc[i].regs.ds = SELECTOR_TASK_DS;
         proc[i].regs.es = SELECTOR_TASK_DS;
@@ -90,15 +95,35 @@ int kmain()
         proc[i].regs.esp = (u32)proc[i].stack + STACK_SIZE;
         proc[i].regs.eflags = 0x1202;	/* IF=1, IOPL=1, bit 2 is always 1.iret后 */
         proc[i].ticks = 0;
+        proc[i].flag = 0;
+        proc[i].msg = 0;
+        proc[i].sendto = NO_TASK;
+        proc[i].recvfrom = NO_TASK;
+        proc[i].hasIntMsg = 0;
+        proc[i].sending = 0;
+        proc[i].nextSending = 0;
     }
 
     /* 内核进程 */    
-    proc[0].regs.eip = (u32)taskTTY;
+    proc[P_TTY].regs.eip = (u32)taskTTY;
+    proc[P_SYSTASK].regs.eip = (u32)taskSys;
+    proc[P_TASK_HD].regs.eip = (u32)taskHd;
+    proc[P_TASK_FS].regs.eip = (u32)taskFs;
+
+    proc[P_TTY].priority = 15;
+    proc[P_SYSTASK].priority = 10;
+    proc[P_TASK_HD].priority = 10;
+    proc[P_TASK_FS].priority = 10;
+
+    proc[P_TTY].tty = 0;
+    proc[P_SYSTASK].tty = 0;
+    proc[P_TASK_HD].tty = 0;
+    proc[P_TASK_FS].tty = 0;
 
     /* 用户进程 */
-    for(i = 1; i < NR_TASKS; ++i)
+    for(i = NR_TASKS; i < NR_TOTAL_PROCS; ++i)
     {
-        /* 初始化寄存器的值，cs指向LDT中第一个段描述符，其它指向第二个 */
+        proc[i].pid = i;
         proc[i].regs.cs = SELECTOR_USER_CS;
         proc[i].regs.ds = SELECTOR_USER_DS;
         proc[i].regs.es = SELECTOR_USER_DS;
@@ -108,18 +133,23 @@ int kmain()
         proc[i].regs.esp = (u32)proc[i].stack + STACK_SIZE;
         proc[i].regs.eflags = 0x1202;	/* IF=1, IOPL=1, bit 2 is always 1.iret后 */
         proc[i].ticks = 0;
+        proc[i].flag = 0;
+        proc[i].msg = 0;
+        proc[i].sendto = NO_TASK;
+        proc[i].recvfrom = NO_TASK;
+        proc[i].hasIntMsg = 0;        
+        proc[i].sending = 0;
+        proc[i].nextSending = 0;
     }
     
-    proc[1].regs.eip = (u32)testA;
-    proc[2].regs.eip = (u32)testB;
+    proc[NR_TASKS].regs.eip = (u32)testA;
+    proc[NR_TASKS+1].regs.eip = (u32)testB;
 
-    proc[0].priority = 15;
-    proc[1].priority = 10;
-    proc[2].priority = 5;
+    proc[NR_TASKS].priority = 5;
+    proc[NR_TASKS+1].priority = 5;
 
-    proc[0].tty = 0;
-    proc[1].tty = 1;
-    proc[2].tty = 2;
+    proc[NR_TASKS].tty = 0;
+    proc[NR_TASKS+1].tty = 0;
 
     procReady = proc; /* 设置下一个调度的进程 */
 
@@ -138,9 +168,8 @@ static void testA()
 {
     while(1)
     {
-        //dispStr("A ");
-        printf("testA<%x>", getTicks());
-        mdelay(100);
+        mdelay(1000);
+        printf("A ");
     }
 }
 
@@ -149,19 +178,7 @@ static void testB()
 {
     while(1)
     {
-        //dispStr("B ");
-        printf("B");
-        mdelay(100);
-    }
-}
-
-/* 进程C */
-static void testC()
-{
-    while(1)
-    {
-        //dispStr("C ");
-        printf("C");
-        mdelay(10);
+        mdelay(1000);
+        printf("B ");
     }
 }

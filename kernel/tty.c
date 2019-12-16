@@ -6,6 +6,7 @@
 #include "irq.h"
 #include "proto.h"
 #include "console.h"
+#include "stdio.h"
 
 struct TTY ttyTable[NR_CONSOLES];
 struct Console consoleTable[NR_CONSOLES];
@@ -163,6 +164,7 @@ static void putKey(struct TTY* tty, u32 key)
     }
 }
 
+#if 0
 void ttyWrite(struct TTY* tty, char* buf, int len)
 {
     char* p = buf;
@@ -174,9 +176,88 @@ void ttyWrite(struct TTY* tty, char* buf, int len)
     }
 }
 
-int sysWrite(char * buf, int len, struct Process * proc)
+int sysPrintx(int unused1, int unused2, char * buf, struct Process * proc)
 {
+    int len = strlen(buf);
+
     ttyWrite(&ttyTable[proc->tty], buf, len);
 
     return 0;
+}
+#endif
+
+int sysPrintx(int unused1, int unused2,  char* s, struct Process* proc)
+{
+	const char* p;
+	char ch;
+
+	char reenterErr[] = "? k_reenter is incorrect for unknown reason";
+	reenterErr[0] = MAG_CH_PANIC;
+
+	if (kreenter == 0)  /* printx() called in Ring<1~3> */
+		p = s;
+	else if (kreenter > 0) /* printx() called in Ring<0> */
+		p = s;
+	else	/* this should NOT happen */
+		p = reenterErr;
+
+	if ((*p == MAG_CH_PANIC) ||
+	    (*p == MAG_CH_ASSERT && procReady < &procTable[NR_TASKS]))
+    {
+		disableInt();
+		char * v = (char*)V_MEM_BASE;
+		const char * q = p + 1; /* +1: skip the magic char */
+
+		while (v < (char*)(V_MEM_BASE + V_MEM_SIZE))
+        {
+			*v++ = *q++;
+			*v++ = RED_CHAR;
+			if (!*q)
+            {
+				while (((int)v - V_MEM_BASE) % (SCR_WIDTH * 16))
+                {
+					/* *v++ = ' '; */
+					v++;
+					*v++ = GRAY_CHAR;
+				}
+				q = p + 1;
+			}
+		}
+
+		__asm__ __volatile__("hlt");
+	}
+
+	while ((ch = *p++) != 0)
+    {
+		if (ch == MAG_CH_PANIC || ch == MAG_CH_ASSERT)
+			continue; /* skip the magic char */
+
+		outChar(ttyTable[proc->tty].console, ch);
+	}
+
+	return 0;
+}
+
+static void disp(const char* str)
+{
+    char ch;
+
+    while((ch = *str++) != '\0')
+        outChar(ttyTable[curConsole].console, ch);
+}
+
+int printk(const char* fmt, ...)
+{
+    int i;
+    char buf[256];
+
+    va_list arg = (va_list)((char*)(&fmt) + 4); /* 指向参数列表 */
+    i = vsprintf(buf, fmt, arg);
+
+    buf[i] = '\0';
+
+    disp(buf);
+
+    return i;    
+
 }
