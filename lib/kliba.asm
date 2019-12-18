@@ -10,6 +10,7 @@ global enableIrq
 global enableInt
 global disableInt
 global portRead
+global portWrite
 
 ; ------------------------------------------------------------------------
 ;                  void outByte(u16 port, u8 value);
@@ -115,4 +116,16 @@ portRead:
 	shr	ecx, 1
 	cld
 	rep	insw
+	ret
+
+; ------------------------------------------------------------------------
+;                  void portWead(u16 port, void* buf, int n);
+; ------------------------------------------------------------------------
+portWrite:
+	mov	edx, [esp + 4]		; port
+	mov	esi, [esp + 4 + 4]	; buf
+	mov	ecx, [esp + 4 + 4 + 4]	; n
+	shr	ecx, 1
+	cld
+	rep	outsw
 	ret

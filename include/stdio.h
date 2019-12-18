@@ -3,6 +3,7 @@
 #include "type.h"
 
 int printf(const char* fmt, ...);
+int sprintf(char *buf, const char *fmt, ...);
 int vsprintf(char* buf, const char* fmt, va_list args);
 
 #define ASSERT
@@ -17,5 +18,8 @@ void assertionFailure(char *exp, char *file, char *base_file, int line);
 void spin(char* funcName);
 void panic(const char *fmt, ...);
 int printk(const char* fmt, ...);
+
+#define	Max(a,b)	((a) > (b) ? (a) : (b))
+#define	Min(a,b)	((a) < (b) ? (a) : (b))
 
 #endif /* _STDIO_H_ */

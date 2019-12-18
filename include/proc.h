@@ -9,10 +9,12 @@
 #define NR_TOTAL_PROCS (NR_TASKS+NR_PROCS)
 
 /* 系统进程 */
-#define P_TTY       0
-#define P_SYSTASK   1
-#define P_TASK_HD	2
-#define P_TASK_FS   3
+#define P_TASK_TTY      0
+#define P_SYSTASK       1
+#define P_TASK_HD	    2
+#define P_TASK_FS       3
+
+#define INVALID_DRIVER	-20
 
 /* obj */
 #define ANY	(NR_TOTAL_PROCS + 10)
@@ -39,7 +41,13 @@ enum msgtype
 #define HARD_INT 1
 #define GET_TICKS 2
 
-#define DEV_OPEN 1001
+#define DEV_OPEN  1001
+#define DEV_CLOSE 1002
+#define DEV_READ  1003
+#define DEV_WRITE 1004
+#define DEV_IOCTL 1005
+
+#define NR_FILES 20
 
 struct StackFrame
 {
@@ -63,6 +71,13 @@ struct StackFrame
 	u32	ss;
 };
 
+struct FileDesc
+{
+    int fdMode;
+    int fdPos;
+    struct Inode* fdInode;
+};
+
 /* 进程描述符 */
 struct Process
 {
@@ -82,6 +97,9 @@ struct Process
     struct Message* msg;    /* 暂存消息 */
     struct Process* sending;
     struct Process* nextSending;
+
+    /* 文件描述符表 */
+    struct FileDesc* filp[NR_FILES];
 };
 
 void schedule();

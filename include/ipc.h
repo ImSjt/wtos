@@ -53,6 +53,12 @@ struct Message
 };
 
 #define	RETVAL		u.m3.m3i1
+#define	CNT		    u.m3.m3i2
+#define	REQUEST		u.m3.m3i2
+#define	PROC_NR		u.m3.m3i3
+#define	DEVICE		u.m3.m3i4
+#define	POSITION	u.m3.m3l1
+#define	BUF		    u.m3.m3p2
 
 int sysSendrec(int function, int obj, struct Message* m, struct Process* proc);
 int sendrec(int function, int obj, struct Message* m);

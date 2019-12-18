@@ -136,6 +136,22 @@
 					      ((drv) << 4) |		\
 					      (lbaHighest & 0xF) | 0xA0)
 
+#define	MAX_DRIVES		    2       /* 最多支持两块硬盘 */
+#define	NR_PART_PER_DRIVE	4       /* 每个扩展分区最多有多少个逻辑分区 */
+#define	NR_SUB_PER_PART		16
+#define	NR_SUB_PER_DRIVE	(NR_SUB_PER_PART * NR_PART_PER_DRIVE)
+#define	NR_PRIM_PER_DRIVE	(NR_PART_PER_DRIVE + 1) /* 每个硬盘的分区数 */
+
+/**
+ * @def MAX_PRIM
+ * Defines the max minor number of the primary partitions.
+ * If there are 2 disks, prim_dev ranges in hd[0-9], this macro will
+ * equals 9.
+ */
+#define	MAX_PRIM		    (MAX_DRIVES * NR_PRIM_PER_DRIVE - 1) /* 主分区的最大值 */
+
+#define	MAX_SUBPARTITIONS	(NR_SUB_PER_DRIVE * MAX_DRIVES)
+
 struct HdCmd
 {
 	u8	features;
@@ -147,12 +163,111 @@ struct HdCmd
 	u8	command;
 };
 
+struct PartInfo
+{
+	u32	base;	/* # of start sector (NOT byte offset, but SECTOR) */
+	u32	size;	/* how many sectors in this partition */
+};
+
+/* main drive struct, one entry per drive */
+struct HdInfo
+{
+	int			    openCnt;
+	struct PartInfo	primary[NR_PRIM_PER_DRIVE]; /* 记录所有主分区的起始扇区和扇区数目 */
+	struct PartInfo	logical[NR_SUB_PER_DRIVE];
+};
+
 #define	HD_TIMEOUT		10000	/* in millisec */
 #define	PARTITION_TABLE_OFFSET	0x1BE
 #define ATA_IDENTIFY		0xEC
 #define ATA_READ		0x20
 #define ATA_WRITE		0x30
 
+/* device numbers of hard disk */
+#define	MINOR_hd1a		0x10
+#define	MINOR_hd2a		(MINOR_hd1a+NR_SUB_PER_PART)
+
+#define	MINOR_BOOT		MINOR_hd2a
+#define	ROOT_DEV		MAKE_DEV(DEV_HD, MINOR_BOOT)
+
+#define	P_PRIMARY	0
+#define	P_EXTENDED	1
+
+#define ORANGES_PART	0x99	/* Orange'S partition */
+#define NO_PART		0x00	/* unused entry */
+#define EXT_PART	0x05	/* extended partition */
+
+#define	DIOCTL_GET_GEO	1
+
 void taskHd();
+
+struct PartEnt
+{
+	u8 bootInd;		/**
+				 * boot indicator
+				 *   Bit 7 is the active partition flag,
+				 *   bits 6-0 are zero (when not zero this
+				 *   byte is also the drive number of the
+				 *   drive to boot so the active partition
+				 *   is always found on drive 80H, the first
+				 *   hard disk).
+				 */
+
+	u8 startHead;		/**
+				 * Starting Head
+				 */
+
+	u8 startSector;	/**
+				 * Starting Sector.
+				 *   Only bits 0-5 are used. Bits 6-7 are
+				 *   the upper two bits for the Starting
+				 *   Cylinder field.
+				 */
+
+	u8 startCyl;		/**
+				 * Starting Cylinder.
+				 *   This field contains the lower 8 bits
+				 *   of the cylinder value. Starting cylinder
+				 *   is thus a 10-bit number, with a maximum
+				 *   value of 1023.
+				 */
+
+	u8 sysId;		/**
+				 * System ID
+				 * e.g.
+				 *   01: FAT12
+				 *   81: MINIX
+				 *   83: Linux
+				 */
+
+	u8 endHead;		/**
+				 * Ending Head
+				 */
+
+	u8 endSector;		/**
+				 * Ending Sector.
+				 *   Only bits 0-5 are used. Bits 6-7 are
+				 *   the upper two bits for the Ending
+				 *    Cylinder field.
+				 */
+
+	u8 endCyl;		/**
+				 * Ending Cylinder.
+				 *   This field contains the lower 8 bits
+				 *   of the cylinder value. Ending cylinder
+				 *   is thus a 10-bit number, with a maximum
+				 *   value of 1023.
+				 */
+
+	u32 startSect;	/**
+				 * starting sector counting from
+				 * 0 / Relative Sector. / start in LBA
+				 */
+
+	u32 nrSects;		/**
+				 * nr of sectors in partition
+				 */
+
+};
 
 #endif /* _HD_H_ */

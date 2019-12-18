@@ -43,6 +43,25 @@ systemCall sysCallTable[NR_SYS_CALL] = {
 };
 
 int ticks;
+
+/* 主设备号为下标，驱动程序号为值 */
+struct DevDrvMap ddmap[] = {
+	/* driver nr.		major device nr.
+	   ----------		---------------- */
+	{INVALID_DRIVER},	/**< 0 : Unused */
+	{INVALID_DRIVER},	/**< 1 : Reserved for floppy driver */
+	{INVALID_DRIVER},	/**< 2 : Reserved for cdrom driver */
+	{P_TASK_HD},		/**< 3 : Hard disk */
+	{P_TASK_TTY},		/**< 4 : TTY */
+	{INVALID_DRIVER}	/**< 5 : Reserved for scsi disk driver */
+};
+
+/**
+ * 6MB~7MB: buffer for FS
+ */
+u8*		    fsbuf		= (u8*)0x600000;
+const int	FSBUF_SIZE	= 0x100000;
+
 /* ------------------------------------------------------------------*/
 
 extern void restart();
@@ -85,6 +104,7 @@ int kmain()
     /* 内核进程 */
     for(i = 0; i < NR_TASKS; ++i)
     {
+        memset(&proc[i], 0, sizeof(proc[i]));
         proc[i].pid = i;
         proc[i].regs.cs = SELECTOR_TASK_CS;
         proc[i].regs.ds = SELECTOR_TASK_DS;
@@ -105,17 +125,17 @@ int kmain()
     }
 
     /* 内核进程 */    
-    proc[P_TTY].regs.eip = (u32)taskTTY;
+    proc[P_TASK_TTY].regs.eip = (u32)taskTTY;
     proc[P_SYSTASK].regs.eip = (u32)taskSys;
     proc[P_TASK_HD].regs.eip = (u32)taskHd;
     proc[P_TASK_FS].regs.eip = (u32)taskFs;
 
-    proc[P_TTY].priority = 15;
+    proc[P_TASK_TTY].priority = 15;
     proc[P_SYSTASK].priority = 10;
     proc[P_TASK_HD].priority = 10;
     proc[P_TASK_FS].priority = 10;
 
-    proc[P_TTY].tty = 0;
+    proc[P_TASK_TTY].tty = 0;
     proc[P_SYSTASK].tty = 0;
     proc[P_TASK_HD].tty = 0;
     proc[P_TASK_FS].tty = 0;
@@ -123,6 +143,7 @@ int kmain()
     /* 用户进程 */
     for(i = NR_TASKS; i < NR_TOTAL_PROCS; ++i)
     {
+        memset(&proc[i], 0, sizeof(proc[i]));
         proc[i].pid = i;
         proc[i].regs.cs = SELECTOR_USER_CS;
         proc[i].regs.ds = SELECTOR_USER_DS;
@@ -166,6 +187,10 @@ int kmain()
 /* 进程A */
 static void testA()
 {
+    int fd = open("/blah", O_CREAT);
+    printf("fd:%d\n", fd);
+    close(fd);
+
     while(1)
     {
         mdelay(1000);
