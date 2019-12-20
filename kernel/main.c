@@ -62,6 +62,13 @@ struct DevDrvMap ddmap[] = {
 u8*		    fsbuf		= (u8*)0x600000;
 const int	FSBUF_SIZE	= 0x100000;
 
+/* fs */
+struct FileDesc     fDescTable[NR_FILE_DESC];
+struct Inode		inodeTable[NR_INODE];
+struct SuperBlock	superBlock[NR_SUPER_BLOCK];
+struct Message  fsMsg;
+struct Process* pcaller;
+struct Inode*	rootInode;
 /* ------------------------------------------------------------------*/
 
 extern void restart();
@@ -94,12 +101,19 @@ void kinit()
     initProt();
 }
 
+static void reset()
+{
+    pcaller = 0;
+}
+
 int kmain()
 {
     dispStr("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n----start kernel----\n");
 
     struct Process* proc = procTable;
     int i;
+
+    reset();
 
     /* 内核进程 */
     for(i = 0; i < NR_TASKS; ++i)

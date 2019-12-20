@@ -3,6 +3,7 @@
 
 void* memcpy(void* dest,const void* src, int size);
 void memset(void* dst, char ch, int size);
+int memcmp(const void* s1, const void*s2, int n);
 
 void dispStr(const char* info);
 void dispColorStr(const char* info, int color);

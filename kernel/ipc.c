@@ -284,3 +284,26 @@ int msgReceive(struct Process* current, int src, struct Message* m)
 	return 0;
 }
 
+void dumpMsg(const char* title, struct Message* m)
+{
+	int packed = 0;
+	printf("{%s}<0x%x>{%ssrc:%s(%d),%stype:%d,%s(0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x)%s}%s",  //, (0x%x, 0x%x, 0x%x)}",
+	       title,
+	       (int)m,
+	       packed ? "" : "\n        ",
+	       procTable[m->source].name,
+	       m->source,
+	       packed ? " " : "\n        ",
+	       m->type,
+	       packed ? " " : "\n        ",
+	       m->u.m3.m3i1,
+	       m->u.m3.m3i2,
+	       m->u.m3.m3i3,
+	       m->u.m3.m3i4,
+	       (int)m->u.m3.m3p1,
+	       (int)m->u.m3.m3p2,
+	       packed ? "" : "\n",
+	       packed ? "" : "\n"/* , */
+		);
+}
+

@@ -38,16 +38,28 @@ enum msgtype
 };
 #endif
 
-#define HARD_INT 1
-#define GET_TICKS 2
+#define HARD_INT    1
+#define GET_TICKS   2
 
-#define DEV_OPEN  1001
-#define DEV_CLOSE 1002
-#define DEV_READ  1003
-#define DEV_WRITE 1004
-#define DEV_IOCTL 1005
+#define OPEN        101
+#define CLOSE       102
+#define READ        103
+#define WRITE       104
+#define LSEEK       105
+#define STAT        106
+#define UNLINK      107
+#define SYSCALL_RET 108
 
-#define NR_FILES 20
+#define DEV_OPEN    201
+#define DEV_CLOSE   202
+#define DEV_READ    203
+#define DEV_WRITE   204
+#define DEV_IOCTL   205
+
+#define	NR_FILES	    64
+#define	NR_FILE_DESC	64	/* FIXME */
+#define	NR_INODE	    64	/* FIXME */
+#define	NR_SUPER_BLOCK	8
 
 struct StackFrame
 {

@@ -37,4 +37,11 @@ extern struct DevDrvMap ddmap[];
 extern u8*		    fsbuf;
 extern const int	FSBUF_SIZE;
 
+extern struct FileDesc      fDescTable[NR_FILE_DESC];
+extern struct Inode		    inodeTable[NR_INODE];
+extern struct SuperBlock	superBlock[NR_SUPER_BLOCK];
+extern struct Message       fsMsg;
+extern struct Process*      pcaller;
+extern struct Inode*        rootInode;
+
 #endif /* _GLOBAL_H_ */

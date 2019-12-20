@@ -14,8 +14,7 @@
 static void initFs();
 static void mkfs();
 static int rwSector(int io_type, int dev, u64 pos, int bytes, int proc_nr, void* buf);
-
-
+static void readSuperBlock(int dev);
 
 void taskFs()
 {
@@ -23,11 +22,66 @@ void taskFs()
 
     initFs();
 
-	spin("FS");
+    while(1)
+    {
+        ipc(RECEIVE, ANY, &fsMsg);
+
+        int src = fsMsg.source;
+        pcaller = &procTable[src];
+
+        switch (fsMsg.type)
+        {
+        case OPEN:
+            fsMsg.FD = doOpen();
+            break;
+
+        case CLOSE:
+            fsMsg.RETVAL = doClose();
+            break;
+        /* case READ: */
+        /* case WRITE: */
+        /*  fs_msg.CNT = do_rdwt(); */
+        /*  break; */
+        /* case LSEEK: */
+        /*  fs_msg.OFFSET = do_lseek(); */
+        /*  break; */
+        /* case UNLINK: */
+        /*  fs_msg.RETVAL = do_unlink(); */
+        /*  break; */
+        /* case RESUME_PROC: */
+        /*  src = fs_msg.PROC_NR; */
+        /*  break; */
+        /* case FORK: */
+        /*  fs_msg.RETVAL = fs_fork(); */
+        /*  break; */
+        /* case EXIT: */
+        /*  fs_msg.RETVAL = fs_exit(); */
+        /*  break; */
+        /* case STAT: */
+        /*  fs_msg.RETVAL = do_stat(); */
+        /*  break; */
+        default:
+            
+            break;
+        }
+
+        fsMsg.type = SYSCALL_RET;
+        ipc(SEND, src, &fsMsg);
+    }
 }
 
 static void initFs()
 {
+    memset(fDescTable, 0, sizeof(fDescTable));
+    memset(inodeTable, 0, sizeof(inodeTable));
+    memset(superBlock, 0, sizeof(superBlock));
+
+    struct SuperBlock* sb = superBlock;
+    for(; sb < superBlock[NR_SUPER_BLOCK]; sb++)
+    {
+        sb->sbDev = NO_DEV;
+    }
+    
     /* 打开硬盘 */
 	struct Message driverMsg;
 	driverMsg.type = DEV_OPEN;
@@ -37,6 +91,13 @@ static void initFs()
 
     /* 创建文件系统 */
     mkfs();
+
+    readSuperBlock(ROOT_DEV);
+
+    sb = getSuperBlock(ROOT_DEV);
+    assert(sb->magic == MAGIC_V1);
+
+    rootInode = getInode(ROOT_DEV, ROOT_INODE);
 }
 
 static void mkfs()
@@ -182,7 +243,6 @@ static void mkfs()
 
     /* 写入根文件目录 */
 	WR_SECT(ROOT_DEV, sb.n1stSect);
-
 }
 
 /* 读写扇区 */
@@ -200,5 +260,121 @@ static int rwSector(int io_type, int dev, u64 pos, int bytes, int procNr, void* 
 	ipc(BOTH, ddmap[MAJOR(dev)].driverNr, &driverMsg);
 
 	return 0;
+}
+
+/* 从缓存区中查找inode，如果没有，则从文件系统中读取 */
+struct Inode* getInode(int dev, int num)
+{
+	if (num == 0)
+		return 0;
+
+	struct Inode * p;
+	struct Inode * q = 0;
+	for (p = &inodeTable[0]; p < &inodeTable[NR_INODE]; p++)
+    {
+		if (p->iCnt)
+        {
+            /* not a free slot */
+			if ((p->iDev == dev) && (p->iNum == num))
+            {
+				/* this is the inode we want */
+				p->iCnt++;
+				return p;
+			}
+		}
+		else
+        {
+            /* a free slot */
+			if (!q) /* q hasn't been assigned yet */
+				q = p; /* q <- the 1st free slot */
+		}
+	}
+
+	if (!q)
+		panic("the inode table is full");
+
+	q->iDev = dev;
+	q->iNum = num;
+	q->iCnt = 1;
+
+	struct SuperBlock* sb = getSuperBlock(dev);
+	int blkNr = 1 + 1 + sb->nrImapSects + sb->nrSmapSects +
+		((num - 1) / (SECTOR_SIZE / INODE_SIZE));
+	RD_SECT(dev, blkNr);
+	struct Inode* pinode =
+		(struct Inode*)((u8*)fsbuf +
+				((num - 1 ) % (SECTOR_SIZE / INODE_SIZE))
+				 * INODE_SIZE);
+	q->iMode = pinode->iMode;
+	q->iSize = pinode->iSize;
+	q->iStartSect = pinode->iStartSect;
+	q->iNrSects = pinode->iNrSects;
+	return q;
+
+}
+
+void putInode(struct Inode* pinode)
+{
+	assert(pinode->iCnt > 0);
+	pinode->iCnt--;
+}
+
+/* 同步内存与文件系统中的inode */
+void syncInode(struct Inode* p)
+{
+	struct Inode* pinode;
+	struct SuperBlock * sb = getSuperBlock(p->i_dev);
+	int blk_nr = 1 + 1 + sb->nrImapSects + sb->nrSmapSects +
+		((p->iNum - 1) / (SECTOR_SIZE / INODE_SIZE));
+	RD_SECT(p->iDev, blk_nr);
+	pinode = (struct Inode*)((u8*)fsbuf +
+				 (((p->iNum - 1) % (SECTOR_SIZE / INODE_SIZE))
+				  * INODE_SIZE));
+	pinode->iMode = p->iMode;
+	pinode->iSize = p->iSize;
+	pinode->iStartSect = p->iStartSect;
+	pinode->iNrSects = p->iNrSects;
+	WR_SECT(p->iDev, blk_nr);
+}
+
+struct SuperBlock* getSuperBlock(int dev)
+{
+	struct SuperBlock* sb = superBlock;
+	for (; sb < &superBlock[NR_SUPER_BLOCK]; sb++)
+		if (sb->sbDev == dev)
+			return sb;
+
+	panic("super block of devie %d not found.\n", dev);
+
+	return 0;
+}
+
+static void readSuperBlock(int dev)
+{
+	int i;
+	struct Message driverMsg;
+
+	driverMsg.type		= DEV_READ;
+	driverMsg.DEVICE	= MINOR(dev);
+	driverMsg.POSITION	= SECTOR_SIZE * 1;
+	driverMsg.BUF		= fsbuf;
+	driverMsg.CNT		= SECTOR_SIZE;
+	driverMsg.PROC_NR	= P_TASK_FS;
+	assert(ddmap[MAJOR(dev)].driverNr != INVALID_DRIVER);
+	ipc(BOTH, ddmap[MAJOR(dev)].driverNr, &driverMsg);
+
+	/* find a free slot in super_block[] */
+	for (i = 0; i < NR_SUPER_BLOCK; i++)
+		if (superBlock[i].sbDev == NO_DEV)
+			break;
+	if (i == NR_SUPER_BLOCK)
+		panic("super_block slots used up");
+
+	assert(i == 0); /* currently we use only the 1st slot */
+
+	struct SuperBlock * psb = (struct SuperBlock *)fsbuf;
+
+	superBlock[i] = *psb;
+	superBlock[i].sbDev = dev;
 }
 

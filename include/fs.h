@@ -104,4 +104,8 @@ void taskFs();
 #define I_CHAR_SPECIAL  0020000
 #define I_NAMED_PIPE	0010000
 
+#define	MAX_PATH	128
+
+int doOpen();
+
 #endif /* _FS_H_ */
