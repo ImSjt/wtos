@@ -1,4 +1,4 @@
-OBJ = main.o
+OBJ = main.o misc.o open.o link.o
 
 all : build-in.o
 

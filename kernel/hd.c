@@ -31,7 +31,7 @@ static void initHd()
 {
     int i;
 	u8 * nrDrives = (u8*)(0x475);
-	printf("NrDrives:%d.\n", *nrDrives);
+	printk("NrDrives:%d.\n", *nrDrives);
 	assert(*nrDrives);
 
     putIrqHandler(AT_WINI_IRQ, hdHandler);
@@ -166,19 +166,19 @@ static void printIdentifyInfo(u16* hdinfo)
 			s[i*2] = *p++;
 		}
 		s[i*2] = 0;
-		printf("%s: %s\n", iinfo[k].desc, s);
+		printk("%s: %s\n", iinfo[k].desc, s);
 	}
 
 	int capabilities = hdinfo[49];
-	printf("LBA supported: %s\n",
+	printk("LBA supported: %s\n",
 	       (capabilities & 0x0200) ? "Yes" : "No");
 
 	int cmdSetSupported = hdinfo[83];
-	printf("LBA48 supported: %s\n",
+	printk("LBA48 supported: %s\n",
 	       (cmdSetSupported & 0x0400) ? "Yes" : "No");
 
 	int sectors = ((int)hdinfo[61] << 16) + hdinfo[60];
-	printf("HD size: %dMB\n", sectors * 512 / 1000000);
+	printk("HD size: %dMB\n", sectors * 512 / 1000000);
 
 }
 
@@ -282,7 +282,7 @@ static void printHdinfo(struct HdInfo* hdi)
 	int i;
 	for (i = 0; i < NR_PART_PER_DRIVE + 1; i++)
     {
-		printf("%sPART_%d: base %d(0x%x), size %d(0x%x) (in sector)\n",
+		printk("%sPART_%d: base %d(0x%x), size %d(0x%x) (in sector)\n",
 		       i == 0 ? " " : "     ",
 		       i,
 		       hdi->primary[i].base,
@@ -294,7 +294,7 @@ static void printHdinfo(struct HdInfo* hdi)
 	for (i = 0; i < NR_SUB_PER_DRIVE; i++) {
 		if (hdi->logical[i].size == 0)
 			continue;
-		printf("         "
+		printk("         "
 		       "%d: base %d(0x%x), size %d(0x%x) (in sector)\n",
 		       i,
 		       hdi->logical[i].base,

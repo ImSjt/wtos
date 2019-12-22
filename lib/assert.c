@@ -4,13 +4,13 @@
 
 void spin(char * funcName)
 {
-	printf("\nspinning in %s ...\n", funcName);
+	printk("\nspinning in %s ...\n", funcName);
 	while (1) {}
 }
 
 void assertionFailure(char *exp, char *file, char *baseFile, int line)
 {
-	printf("%c  assert(%s) failed: file: %s, base_file: %s, ln%d",
+	printk("%c  assert(%s) failed: file: %s, base_file: %s, ln%d",
 	       MAG_CH_ASSERT,
 	       exp, file, baseFile, line);
 
@@ -30,7 +30,7 @@ void panic(const char *fmt, ...)
 
 	i = vsprintf(buf, fmt, arg);
 
-	printf("%c !!panic!! %s", MAG_CH_PANIC, buf);
+	printk("%c !!panic!! %s", MAG_CH_PANIC, buf);
 
 	/* should never arrive here */
 	__asm__ __volatile__("ud2");

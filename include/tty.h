@@ -43,6 +43,12 @@ struct TTY
     u32* inBufTail; /* 指向需要处理的数据 */
     int inBufCount; /* 缓存区中的数据量 */
 
+	int	ttyCaller;
+	int	ttyProcnr;
+	void* ttyReqBuf;
+	int	ttyLeftCnt;
+	int	ttyTransCnt;
+
     struct Console* console;    /* 指向对应的控制台 */
 };
 

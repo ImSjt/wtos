@@ -287,7 +287,7 @@ int msgReceive(struct Process* current, int src, struct Message* m)
 void dumpMsg(const char* title, struct Message* m)
 {
 	int packed = 0;
-	printf("{%s}<0x%x>{%ssrc:%s(%d),%stype:%d,%s(0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x)%s}%s",  //, (0x%x, 0x%x, 0x%x)}",
+	printk("{%s}<0x%x>{%ssrc:%s(%d),%stype:%d,%s(0x%x, 0x%x, 0x%x, 0x%x, 0x%x, 0x%x)%s}%s",  //, (0x%x, 0x%x, 0x%x)}",
 	       title,
 	       (int)m,
 	       packed ? "" : "\n        ",

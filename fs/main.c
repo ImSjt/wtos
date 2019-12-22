@@ -13,12 +13,11 @@
 
 static void initFs();
 static void mkfs();
-static int rwSector(int io_type, int dev, u64 pos, int bytes, int proc_nr, void* buf);
 static void readSuperBlock(int dev);
 
 void taskFs()
 {
-	printf("Task FS begins.\n");
+	printk("Task FS begins.\n");
 
     initFs();
 
@@ -38,19 +37,21 @@ void taskFs()
         case CLOSE:
             fsMsg.RETVAL = doClose();
             break;
-        /* case READ: */
-        /* case WRITE: */
-        /*  fs_msg.CNT = do_rdwt(); */
-        /*  break; */
+        case READ:
+        case WRITE:
+            fsMsg.CNT = doRdWt();
+            break;
         /* case LSEEK: */
         /*  fs_msg.OFFSET = do_lseek(); */
         /*  break; */
-        /* case UNLINK: */
-        /*  fs_msg.RETVAL = do_unlink(); */
-        /*  break; */
-        /* case RESUME_PROC: */
-        /*  src = fs_msg.PROC_NR; */
-        /*  break; */
+        case UNLINK:
+            fsMsg.RETVAL = doUnlink();
+            break;
+        case RESUME_PROC:
+            src = fsMsg.PROC_NR;
+            break;
+        case SUSPEND_PROC:
+            break;
         /* case FORK: */
         /*  fs_msg.RETVAL = fs_fork(); */
         /*  break; */
@@ -61,13 +62,24 @@ void taskFs()
         /*  fs_msg.RETVAL = do_stat(); */
         /*  break; */
         default:
-            
             break;
         }
-
-        fsMsg.type = SYSCALL_RET;
-        ipc(SEND, src, &fsMsg);
+		if (fsMsg.type != SUSPEND_PROC)
+        {
+            fsMsg.type = SYSCALL_RET;
+            ipc(SEND, src, &fsMsg);
+		}
     }
+}
+
+static void devOpen()
+{
+    /* 打开硬盘 */
+	struct Message driverMsg;
+	driverMsg.type = DEV_OPEN;
+    driverMsg.DEVICE = MINOR(ROOT_DEV);
+    assert(ddmap[MAJOR(ROOT_DEV)].driverNr != INVALID_DRIVER);    
+	ipc(BOTH, P_TASK_HD, &driverMsg);
 }
 
 static void initFs()
@@ -77,26 +89,23 @@ static void initFs()
     memset(superBlock, 0, sizeof(superBlock));
 
     struct SuperBlock* sb = superBlock;
-    for(; sb < superBlock[NR_SUPER_BLOCK]; sb++)
+    for(; sb < &superBlock[NR_SUPER_BLOCK]; sb++)
     {
         sb->sbDev = NO_DEV;
     }
     
-    /* 打开硬盘 */
-	struct Message driverMsg;
-	driverMsg.type = DEV_OPEN;
-    driverMsg.DEVICE = MINOR(ROOT_DEV);
-    assert(ddmap[MAJOR(ROOT_DEV)].driverNr != INVALID_DRIVER);    
-	ipc(BOTH, P_TASK_HD, &driverMsg);
+    devOpen();
 
     /* 创建文件系统 */
     mkfs();
 
+    /* 读取超级块到内存中 */
     readSuperBlock(ROOT_DEV);
 
     sb = getSuperBlock(ROOT_DEV);
     assert(sb->magic == MAGIC_V1);
 
+    /* 读取根目录的inode到内存中 */
     rootInode = getInode(ROOT_DEV, ROOT_INODE);
 }
 
@@ -117,7 +126,7 @@ static void mkfs()
 	assert(ddmap[MAJOR(ROOT_DEV)].driverNr != INVALID_DRIVER);
 	ipc(BOTH, ddmap[MAJOR(ROOT_DEV)].driverNr, &driverMsg);
 
-	printf("dev size: 0x%x sectors\n", geo.size);
+	printk("dev size: 0x%x sectors\n", geo.size);
 
 	/************************/
 	/*      super block     */
@@ -150,7 +159,7 @@ static void mkfs()
 	/* 写超级块 */
 	WR_SECT(ROOT_DEV, 1);
 
-	printf("devbase:0x%x00, sb:0x%x00, imap:0x%x00, smap:0x%x00\n"
+	printk("devbase:0x%x00, sb:0x%x00, imap:0x%x00, smap:0x%x00\n"
 	       "        inodes:0x%x00, 1st_sector:0x%x00\n", 
 	       geo.base * 2,
 	       (geo.base + 1) * 2,
@@ -246,11 +255,11 @@ static void mkfs()
 }
 
 /* 读写扇区 */
-static int rwSector(int io_type, int dev, u64 pos, int bytes, int procNr, void* buf)
+int rwSector(int ioType, int dev, u64 pos, int bytes, int procNr, void* buf)
 {
 	struct Message driverMsg;
 
-	driverMsg.type		= io_type;
+	driverMsg.type		= ioType;
 	driverMsg.DEVICE	= MINOR(dev);
 	driverMsg.POSITION	= pos;
 	driverMsg.BUF		= buf;
@@ -309,8 +318,8 @@ struct Inode* getInode(int dev, int num)
 	q->iSize = pinode->iSize;
 	q->iStartSect = pinode->iStartSect;
 	q->iNrSects = pinode->iNrSects;
+    
 	return q;
-
 }
 
 void putInode(struct Inode* pinode)
@@ -323,7 +332,7 @@ void putInode(struct Inode* pinode)
 void syncInode(struct Inode* p)
 {
 	struct Inode* pinode;
-	struct SuperBlock * sb = getSuperBlock(p->i_dev);
+	struct SuperBlock * sb = getSuperBlock(p->iDev);
 	int blk_nr = 1 + 1 + sb->nrImapSects + sb->nrSmapSects +
 		((p->iNum - 1) / (SECTOR_SIZE / INODE_SIZE));
 	RD_SECT(p->iDev, blk_nr);
@@ -378,3 +387,115 @@ static void readSuperBlock(int dev)
 	superBlock[i].sbDev = dev;
 }
 
+int doRdWt()
+{
+	int fd = fsMsg.FD;	/**< file descriptor. */
+	void * buf = fsMsg.BUF;/**< r/w buffer */
+	int len = fsMsg.CNT;	/**< r/w bytes */
+
+	int src = fsMsg.source;		/* caller proc nr. */
+
+	assert((pcaller->filp[fd] >= &fDescTable[0]) &&
+	       (pcaller->filp[fd] < &fDescTable[NR_FILE_DESC]));
+
+	if (!(pcaller->filp[fd]->fdMode & O_RDWR))
+		return -1;
+
+    /* 读写位置 */
+	int pos = pcaller->filp[fd]->fdPos;
+
+    /* 文件对应的inode */
+	struct Inode* pin = pcaller->filp[fd]->fdInode;
+
+	assert(pin >= &inodeTable[0] && pin < &inodeTable[NR_INODE]);
+
+	int imode = pin->iMode & I_TYPE_MASK;
+
+    /* 字符设备 */
+	if (imode == I_CHAR_SPECIAL)
+    {
+		int t = fsMsg.type == READ ? DEV_READ : DEV_WRITE;
+		fsMsg.type = t;
+
+        /* 文件起始的扇区 */
+		int dev = pin->iStartSect;
+		assert(MAJOR(dev) == 4);
+
+        /* 将消息发送给驱动程序 */
+		fsMsg.DEVICE	= MINOR(dev);
+		fsMsg.BUF	    = buf;
+		fsMsg.CNT	    = len;
+		fsMsg.PROC_NR	= src;
+		assert(ddmap[MAJOR(dev)].driverNr != INVALID_DRIVER);
+		ipc(BOTH, ddmap[MAJOR(dev)].driverNr, &fsMsg);
+		assert(fsMsg.CNT == len);
+
+		return fsMsg.CNT;
+	}
+	else
+    {
+		assert(pin->iMode == I_REGULAR || pin->iMode == I_DIRECTORY);
+		assert((fsMsg.type == READ) || (fsMsg.type == WRITE));
+
+        /* 允许读到的最后位置 */
+		int posEnd;
+		if (fsMsg.type == READ)
+			posEnd = Min(pos + len, pin->iSize);
+		else		/* WRITE */
+			posEnd = Min(pos + len, pin->iNrSects * SECTOR_SIZE);
+
+		int off = pos % SECTOR_SIZE;
+		int rwSectMin=pin->iStartSect+(pos>>SECTOR_SIZE_SHIFT);     /* 起始扇区 */
+		int rwSectMax=pin->iStartSect+(posEnd>>SECTOR_SIZE_SHIFT);  /* 结束扇区 */
+
+		int chunk = Min(rwSectMax - rwSectMin + 1,
+				FSBUF_SIZE >> SECTOR_SIZE_SHIFT);
+
+		int bytesRw = 0;
+		int bytesLeft = len;
+		int i;
+		for (i = rwSectMin; i <= rwSectMax; i += chunk)
+        {
+			/* read/write this amount of bytes every time */
+			int bytes = Min(bytesLeft, chunk * SECTOR_SIZE - off);
+
+            /* 读扇区 */
+			rwSector(DEV_READ,
+				  pin->iDev,
+				  i * SECTOR_SIZE,
+				  chunk * SECTOR_SIZE,
+				  P_TASK_FS,
+				  fsbuf);
+
+			if (fsMsg.type == READ)
+            {
+                memcpy((void*)(buf+bytesRw), (void*)(fsbuf+off), bytes);
+			}
+			else
+            {   /* WRITE */
+                memcpy((void*)(fsbuf+off), (void*)(buf+bytesRw), bytes);
+				rwSector(DEV_WRITE,
+					  pin->iDev,
+					  i * SECTOR_SIZE,
+					  chunk * SECTOR_SIZE,
+					  P_TASK_FS,
+					  fsbuf);
+			}
+			off = 0;
+			bytesRw += bytes;
+			pcaller->filp[fd]->fdPos += bytes; /* 移动文件指针 */
+			bytesLeft -= bytes;
+		}
+
+		if (pcaller->filp[fd]->fdPos > pin->iSize)
+        {
+			/* update inode::size */
+			pin->iSize = pcaller->filp[fd]->fdPos;
+
+			/* write the updated i-node back to disk */
+			syncInode(pin); /* 更新文件系统中的inode */
+		}
+
+		return bytesRw;
+	}
+}

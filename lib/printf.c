@@ -1,6 +1,7 @@
 #include "type.h"
 #include "proto.h"
 #include "stdio.h"
+#include "string.h"
 
 int printf(const char* fmt, ...)
 {
@@ -11,7 +12,8 @@ int printf(const char* fmt, ...)
     i = vsprintf(buf, fmt, arg);
 
     buf[i] = '\0';
-    printx(buf);
+    //printx(buf);
+    write(1, buf, strlen(buf));
 
     return i;
 }

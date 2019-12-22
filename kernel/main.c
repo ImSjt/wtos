@@ -69,6 +69,8 @@ struct SuperBlock	superBlock[NR_SUPER_BLOCK];
 struct Message  fsMsg;
 struct Process* pcaller;
 struct Inode*	rootInode;
+
+int	keyPressed;
 /* ------------------------------------------------------------------*/
 
 extern void restart();
@@ -201,15 +203,31 @@ int kmain()
 /* 进程A */
 static void testA()
 {
-    int fd = open("/blah", O_CREAT);
-    printf("fd:%d\n", fd);
-    close(fd);
+	char tty_name[] = "/dev_tty0";
 
-    while(1)
-    {
-        mdelay(1000);
-        printf("A ");
-    }
+	int fd_stdin  = open(tty_name, O_RDWR);
+	assert(fd_stdin  == 0);
+	int fd_stdout = open(tty_name, O_RDWR);
+	assert(fd_stdout == 1);
+
+	char rdbuf[128];
+
+	while (1) {
+        printf("$ ");
+		int r = read(fd_stdin, rdbuf, 70);
+		rdbuf[r] = 0;
+
+		if (strcmp(rdbuf, "hello") == 0) {
+            printf("hello world!\n");
+		}
+		else {
+			if (rdbuf[0]) {
+                printf("{%s}\n", rdbuf);
+			}
+		}
+	}
+
+	assert(0); /* never arrive here */
 }
 
 /* 进程B */
@@ -218,6 +236,6 @@ static void testB()
     while(1)
     {
         mdelay(1000);
-        printf("B ");
+        //printf("B ");
     }
 }

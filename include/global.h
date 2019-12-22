@@ -44,4 +44,6 @@ extern struct Message       fsMsg;
 extern struct Process*      pcaller;
 extern struct Inode*        rootInode;
 
+extern int	keyPressed;
+
 #endif /* _GLOBAL_H_ */

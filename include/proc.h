@@ -48,7 +48,11 @@ enum msgtype
 #define LSEEK       105
 #define STAT        106
 #define UNLINK      107
-#define SYSCALL_RET 108
+
+#define SUSPEND_PROC 111
+#define RESUME_PROC  112
+
+#define SYSCALL_RET  121
 
 #define DEV_OPEN    201
 #define DEV_CLOSE   202

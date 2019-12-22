@@ -1,11 +1,14 @@
 #include "fs.h"
 #include "global.h"
 #include "stdio.h"
+#include "ipc.h"
+#include "string.h"
 
 static struct Inode* createFile(char* path, int flags);
 static int allocSmapBit(int dev, int nrSectsToAlloc);
 static struct Inode* newInode(int dev, int inodeNr, int startSect);
 static int allocImapBit(int dev);
+static void newDirEntry(struct Inode* dirInode,int inodeNr,char* filename);
 
 int doOpen()
 {
@@ -41,7 +44,7 @@ int doOpen()
 	if (i >= NR_FILE_DESC)
 		panic("fDescTable[] is full (PID:%d)", proc2pid(pcaller));
 
-    /* 查找文件是否存在 */
+    /* 查找文件是否存在文件系统中 */
 	int inodeNr = searchFile(pathname);
 
 	struct Inode* pin = 0;
@@ -49,7 +52,7 @@ int doOpen()
     {
 		if (inodeNr)
         {
-			printf("file exists.\n");
+			printk("file exists.\n");
 			return -1;
 		}
 		else
@@ -129,13 +132,16 @@ static struct Inode* createFile(char* path, int flags)
 	if (stripPath(filename, path, &dirInode) != 0)
 		return 0;
 
+    /* 设置inode map */
 	int inodeNr = allocImapBit(dirInode->iDev);
 
+    /* 设置sector map */
 	int freeSectNr = allocSmapBit(dirInode->iDev, NR_DEFAULT_FILE_SECTS);
 
+    /* 新分配一个inode */
 	struct Inode* newino = newInode(dirInode->iDev, inodeNr, freeSectNr);
 
-    /* 在文件中创建新的目录项 */
+    /* 在文件中创建新的文件项 */
 	newDirEntry(dirInode, newino->iNum, filename);
 
 	return newino;

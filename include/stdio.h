@@ -22,4 +22,17 @@ int printk(const char* fmt, ...);
 #define	Max(a,b)	((a) > (b) ? (a) : (b))
 #define	Min(a,b)	((a) < (b) ? (a) : (b))
 
+#define	O_CREAT		1
+#define	O_RDWR		2
+
+#define SEEK_SET	1
+#define SEEK_CUR	2
+#define SEEK_END	3
+
+int open(const char* pathname, int flags);
+int close(int fd);
+int read(int fd, void* buf, int count);
+int write(int fd, const void *buf, int count);
+int unlink(const char* pathname);
+
 #endif /* _STDIO_H_ */

@@ -13,6 +13,7 @@ void delay(int time);
 
 char* itoa(char* str, int num);
 char* strcpy(char* dst, char* src);
-int strlen(char* str);
+int strlen(const char* str);
+int strcmp(const char* s1, const char* s2);
 
 #endif /* _STRING_H_ */

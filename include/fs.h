@@ -1,5 +1,7 @@
 #ifndef _FS_H_
 #define _FS_H_
+#include "type.h"
+#include "hd.h"
 
 /* major device numbers (corresponding to kernel/global.c::dd_map[]) */
 #define	NO_DEV			0
@@ -106,6 +108,20 @@ void taskFs();
 
 #define	MAX_PATH	128
 
+
+
 int doOpen();
+int doClose();
+struct SuperBlock* getSuperBlock(int dev);
+int stripPath(char* filename, const char* pathname, struct Inode** ppinode);
+int rwSector(int io_type, int dev, u64 pos, int bytes, int procNr, void* buf);
+int searchFile(char* path);
+struct Inode* getInode(int dev, int num);
+void putInode(struct Inode* pinode);
+void syncInode(struct Inode* p);
+int doRdWt();
+int doUnlink();
+
+
 
 #endif /* _FS_H_ */

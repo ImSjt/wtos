@@ -1,6 +1,7 @@
 #include "fs.h"
 #include "global.h"
 #include "string.h"
+#include "hd.h"
 
 int searchFile(char* path)
 {

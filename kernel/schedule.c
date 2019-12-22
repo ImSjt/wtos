@@ -1,6 +1,7 @@
 #include "global.h"
 #include "proc.h"
 #include "string.h"
+#include "stdio.h"
 
 void schedule()
 {
@@ -40,8 +41,12 @@ void scheduleTick(int n)
         return;
     }
 
-    ++ticks;
+	if (keyPressed)
+	{
+        informInt(P_TASK_TTY);
+    }
 
+    ++ticks;
     if(procReady->ticks > 0)
     {
         --procReady->ticks;
